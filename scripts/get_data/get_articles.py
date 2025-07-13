@@ -1,7 +1,6 @@
+import re
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
-import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,50 +10,125 @@ from selenium.webdriver.common.by import By
 options = Options()
 options.add_argument('--headless')
 
-def get_articles():
-    urls = []
-    page_number = 1
+def get_articles(urls):
     driver = webdriver.Chrome(options=options)
+    df_events = pd.DataFrame()
+    df_scores = pd.DataFrame()
 
-    while True:
-        url = f'https://washingtoncitypaper.com/article/tag/the-needle/page/{page_number}/'
-        driver.get(url)
+    for id, url in enumerate(urls,1):
+        # Extract list of items
         print(url)
+        driver.get(url)
+        
+        # Check to make sure website is accessible otherwise move to next url
         try:
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="primary"]/header/span/h1/span[2]'))
+                EC.presence_of_element_located((By.XPATH, '//*[@id="main"]'))
             )
+        
         except:
-            break
+            pass
 
         response = driver.page_source
-
         soup = BeautifulSoup(response, 'html.parser')
+        date_tag = soup.find('time', class_='entry-date published')
+        
+        if date_tag:
+            date = date_tag['datetime']        
+        
+        # Articles are inconsistently formatted. Sometimes it's a bullet list, sometimes it's just paragraphs
+        ## Bullet list extraction
+        list_object = soup.find('ul', class_='wp-block-list')
+        
+        if list_object:
+            list_items = list_object.find_all('li')
+            
+            for idx, li in enumerate(list_items, 1):
+                text = li.get_text(strip=False)
+                event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
+                score_match = re.search(r"Today’s score:\s*(-?\d+)", text) # regex to get net score for article
+                needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
+                
+                if event_match:
+                    title = event_match.group(1).strip()
+                    description = event_match.group(2).strip()
+                    score = int(event_match.group(3))
+                    df_events_temp = pd.DataFrame({'article_id':[id]
+                                            ,'date': [date]
+                                            ,'event_id':[idx]
+                                            ,'title': [title]
+                                            ,'description':[description]
+                                            ,'score':[score]
+                                            ,'url':[url]
+                                            })
+                    df_events = pd.concat([df_events,df_events_temp],axis=0)
 
-        print(f"Page {page_number} processed successfully.")
-        articles = soup.find_all('article')
-        for idx, article in enumerate(articles, 1):
-            figure = article.find('figure')
+                elif score_match and needle_match:
+                    net_score = int(score_match.group(1))
+                    needle_rating = int(needle_match.group(1))
+                    df_scores_temp = pd.DataFrame({'article_id':[id]
+                                                  ,'date':[date]
+                                                  ,'net_score':[net_score]
+                                                  ,'needle_rating':[needle_rating]
+                                                  ,'url':[url]
+                                                  })
+                    df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
+            
+                else:
+                    pass
+                    # print(f"Item {idx} didn’t match expected formats.")
+            
+            else:
+                pass
+                # print("No list content found.")
 
-            if figure:
-                anchor = figure.find('a', href=True)
+                
+        ## Paragraph extraction
+        ### Can use the same extraction methods but need to access the content slightly different
+        entry_div = soup.find('div', class_='entry-content')
+        
+        if entry_div:
+            paragraphs = entry_div.find_all('p')
+            
+            for idx, p in enumerate(paragraphs, 1):
+                text = p.get_text(strip=False)
+                event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
+                score_match = re.search(r"Today’s score:\s*(-?\d+)", text) # regex to get net score for article
+                needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
+                # print(f"Paragraph {idx}: {p.get_text(strip=False)}")
+                
+                if event_match:
+                    title = event_match.group(1).strip()
+                    description = event_match.group(2).strip()
+                    score = int(event_match.group(3))
+                    df_events_temp = pd.DataFrame({'article_id':[id]
+                                            ,'date': [date]
+                                            ,'event_id':[idx]
+                                            ,'title': [title]
+                                            ,'description':[description]
+                                            ,'score':[score]
+                                            ,'url':[url]
+                                            })
+                    df_events = pd.concat([df_events,df_events_temp],axis=0)
 
-                if anchor:
-                    href = anchor['href']
-                    urls = urls + [href]
-                    # print(f"Article {idx} - Figure link: {href}")
+                elif score_match and needle_match:
+                    net_score = int(score_match.group(1))
+                    needle_rating = int(needle_match.group(1))
+                    df_scores_temp = pd.DataFrame({'article_id':[id]
+                                                  ,'date':[date]
+                                                  ,'net_score':[net_score]
+                                                  ,'needle_rating':[needle_rating]
+                                                  ,'url':[url]
+                                                  })
+                    df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
 
-        page_number += 1
-    return urls
+                else:
+                    pass
+                    # print(f"Item {idx} didn’t match expected formats.")
+        
+        else:
+            pass
+            # print("No <div class='entry-content'> found.")
 
+    return df_events, df_scores
 
-# Load website 
-
-# Get all article objects
-
-# Get all hrefs
-
-# Get pagination
-
-# Look through pages (maybe try/except?)
-#https://washingtoncitypaper.com/article/tag/the-needle/page/[]/
