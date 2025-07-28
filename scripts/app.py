@@ -78,6 +78,13 @@ app.layout = html.Div([
         ,value = [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
         ,marks = marks
     )
+    ,html.Div(id='needle-rating-box', style={
+    'marginTop': '10px',
+    'padding': '10px',
+    'border': '1px solid #ccc',
+    'backgroundColor': '#f9f9f9',
+    'fontWeight': 'bold'
+    })
     ,dcc.Graph(id = 'waterfall-graph')
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
@@ -108,6 +115,37 @@ app.layout = html.Div([
 ])
 
 # Callbacks
+@app.callback(
+    Output('needle-rating-box', 'children'),
+    Input('date-slider', 'value'),
+    Input('relayout-store', 'data'),
+    Input('chart-mode', 'data'),
+    Input('click-store', 'data')
+)
+def update_rating_text(date_range, relayoutData, mode, clickData):
+    start_ts, end_ts = date_range
+    start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
+    end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
+    
+    if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
+        df_filtered = df_scores[df_scores['date'].between(zoom_start, zoom_end)]
+    else:
+        df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
+
+    # If in detail mode, filter down to clicked date
+    if mode == 'detail' and clickData:
+        clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        df_filtered = df_filtered[df_filtered['date'] == clicked_date]
+
+    # Find latest available rating (sorted by date descending)
+    if not df_filtered.empty:
+        latest_rating = df_filtered.sort_values('date', ascending=False)['needle_rating'].iloc[0]
+        return f"Current Needle Rating: {latest_rating}"
+    else:
+        return "No rating available for current filter"
+
 @app.callback(
     Output("waterfall-graph", "figure"),
     Input("date-slider", "value"),
