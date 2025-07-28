@@ -34,11 +34,12 @@ df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y')
 
 # Create base start point and setting colors 
 df_scores['base'] = df_scores[['needle_rating_previous', 'needle_rating']].min(axis=1)
+
 df_scores['color'] = df_scores['net_score'].apply(
     lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
 )
 
-# Give fake volume to cases where the needle doesn't change
+# NEED TO CLEAN THIS UP SO THEY DON'T HAVE NET SCORE OF 1
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'net_score'] = 1.0
 df_scores.loc[zero_mask, 'base'] = df_scores.loc[zero_mask, 'base'] - 1
@@ -65,7 +66,6 @@ df_events['links'] = (
 df_events['color'] = df_events['score'].apply(
     lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
 )
-
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
@@ -156,14 +156,14 @@ def update_chart(date_range, relayoutData, mode, clickData):
     fig = go.Figure(data = [go.Bar(
         x = df_filtered['date']          
         ,y = df_filtered['net_score']
-        ,base = df_filtered['base']       
+        ,base = df_filtered['needle_rating_previous']       
         ,marker_color = df_filtered['color']
-        ,customdata = df_filtered[['needle_rating_previous','needle_rating']]
+        ,customdata = df_filtered[['needle_rating_previous','needle_rating','net_score']]
         ,hovertemplate = 
                 "<b>Date:</b> %{x}<br>" 
                 +"<b>Previous Score:</b> %{customdata[0]}<br>"
                 +"<b>New Score:</b> %{customdata[1]}<br>"
-                +"<b>Net Change:</b> %{y}<extra></extra>"
+                +"<b>Net Change:</b> %{customdata[2]}<extra></extra>"
     )])
     fig.update_layout(
     yaxis_title = "Needle Score",
