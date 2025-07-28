@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc, callback, Output, Input, dash_table, State, callback_context
 import plotly.express as px
 import plotly.graph_objects as go
+from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
@@ -135,15 +136,11 @@ def update_chart(date_range, relayoutData, mode, clickData):
                 "<b>Title:</b> %{customdata[0]}<br>"
                 +"<b>Date:</b> %{x}<br>" 
                 +"<b>Score:</b> %{y}<br>"
-        # ,width = 0.5
         )])
         fig.update_layout(
-        # title = "Open–Close Bar Chart",
         yaxis_title = "Needle Score",
         xaxis_title = "Date",
         bargap = 0
-        # ,dragmode = 'zoom'
-        # ,doubleclick = 'none'
         )
         return fig
 
@@ -161,52 +158,36 @@ def update_chart(date_range, relayoutData, mode, clickData):
         ,y = df_filtered['net_score']
         ,base = df_filtered['base']       
         ,marker_color = df_filtered['color']
-        ,customdata = df_filtered[['needle_rating']]
+        ,customdata = df_filtered[['needle_rating_previous','needle_rating']]
         ,hovertemplate = 
                 "<b>Date:</b> %{x}<br>" 
-                +"<b>Previous Score:</b> %{base}<br>"
-                +"<b>New Score:</b> %{customdata[0]}<br>"
+                +"<b>Previous Score:</b> %{customdata[0]}<br>"
+                +"<b>New Score:</b> %{customdata[1]}<br>"
                 +"<b>Net Change:</b> %{y}<extra></extra>"
-        # ,width = 0.5
     )])
     fig.update_layout(
-    # title = "Open–Close Bar Chart",
     yaxis_title = "Needle Score",
     xaxis_title = "Date",
     bargap = 0
-    # ,dragmode = 'zoom'
-    # ,doubleclick = 'none'
     )
-    
-    # Remove gaps between events
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
-    # fig.show(config={'doubleClick': False})
 
     return fig
-
-# @app.callback(
-#     Output('click-store','data'),
-#     Input('waterfall-graph','clickData'),
-#     Input('reset-button','n_clicks'),
-#     prevent_initial_call=True
-# )
-# def store_click(clickData, n_clicks):
-#     triggered = callback_context.triggered[0]['prop_id']
-#     if triggered == 'reset-button.n_clicks':
-#         return None
-#     return clickData
 
 @app.callback(
     Output('click-store','data'),
     Output('chart-mode','data'),
     Input('waterfall-graph','clickData'),
+    State('chart-mode', 'data'),
     Input('reset-button','n_clicks'),
     prevent_initial_call=True
 )
-def handle_click(clickData, n_clicks):
+def handle_click(clickData, mode, n_clicks):
     triggered = callback_context.triggered[0]['prop_id']
     if triggered == 'reset-button.n_clicks':
         return None, 'main'
+    if mode == 'detail':
+        raise PreventUpdate
     return clickData, 'detail'
 
 @app.callback(
