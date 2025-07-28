@@ -11,7 +11,6 @@ os.makedirs('../output/', exist_ok=True)
 
 def main():
     urls = get_article_urls.get_article_urls(limit = None)
-    # urls = urls[:6] # temp override to get one page of results at a time
     df_events, df_scores = get_articles.get_articles(urls)
     
     df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
@@ -23,6 +22,8 @@ def main():
                                 ,'description': 'object'
                                 ,'score':int
                                 ,'url':'object'})
+    df_events['date'] = df_events['date'].dt.normalize()
+    df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y')
     
     df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
     df_scores['date'] = df_scores['date'].dt.tz_localize(None)
@@ -31,10 +32,11 @@ def main():
                                 ,'net_score': int
                                 ,'needle_rating':int
                                 ,'url':'object'})
+    df_scores['date'] = df_scores['date'].dt.normalize()
     df_scores['needle_rating_previous'] = df_scores['needle_rating'].shift(-1)
     
-    df_events.to_csv('../input/events.csv')
-    df_scores.to_csv('../input/scores.csv')
+    df_events.to_excel('../input/events.xlsx')
+    df_scores.to_excel('../input/scores.xlsx')
 
 if __name__ == "__main__":
     main()

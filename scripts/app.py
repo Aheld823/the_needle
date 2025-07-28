@@ -6,30 +6,30 @@ import pandas as pd
 import os
 import datetime as datetime
 
-df_events = pd.read_csv('input/events.csv')
-df_scores = pd.read_csv('input/scores.csv')
+df_events = pd.read_excel('input/events.xlsx')
+df_scores = pd.read_excel('input/scores.xlsx')
 
 # Date conversation (can probably get rid of eventually)
-df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
-df_scores['date'] = df_scores['date'].dt.tz_localize(None)
-df_scores = df_scores.astype({'article_id': 'object'
-                            ,'date': 'datetime64[ns]'
-                            ,'net_score': int
-                            ,'needle_rating':int
-                            ,'url':'object'})
-df_scores['date'] = df_scores['date'].dt.normalize()
+# df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
+# df_scores['date'] = df_scores['date'].dt.tz_localize(None)
+# df_scores = df_scores.astype({'article_id': 'object'
+#                             ,'date': 'datetime64[ns]'
+#                             ,'net_score': int
+#                             ,'needle_rating':int
+#                             ,'url':'object'})
+# df_scores['date'] = df_scores['date'].dt.normalize()
 
-df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
-df_events['date'] = df_events['date'].dt.tz_localize(None)
-df_events = df_events.astype({'article_id': 'object'
-                            ,'date': 'datetime64[ns]'
-                            ,'event_id':'object'
-                            ,'title':'object'
-                            ,'description':'object'
-                            ,'score': int
-                            ,'url':'object'})
-df_events['date'] = df_events['date'].dt.normalize()
-df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y') 
+# df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
+# df_events['date'] = df_events['date'].dt.tz_localize(None)
+# df_events = df_events.astype({'article_id': 'object'
+#                             ,'date': 'datetime64[ns]'
+#                             ,'event_id':'object'
+#                             ,'title':'object'
+#                             ,'description':'object'
+#                             ,'score': int
+#                             ,'url':'object'})
+# df_events['date'] = df_events['date'].dt.normalize()
+# df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y') 
 ### 
 
 # Create base start point and setting colors 
@@ -42,7 +42,7 @@ df_scores['color'] = df_scores['net_score'].apply(
 # NEED TO CLEAN THIS UP SO THEY DON'T HAVE NET SCORE OF 1
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'net_score'] = 1.0
-df_scores.loc[zero_mask, 'base'] = df_scores.loc[zero_mask, 'base'] - 1
+# df_scores.loc[zero_mask, 'base'] = df_scores.loc[zero_mask, 'base'] - 1
 
 # Find gaps in events
 dt_obs = df_scores['date'].dt.normalize()
@@ -69,6 +69,7 @@ df_events['color'] = df_events['score'].apply(
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
+# App layout
 app.layout = html.Div([
     html.H4('The Needle Dashboard')
     ,dcc.RangeSlider(
@@ -85,11 +86,11 @@ app.layout = html.Div([
     'backgroundColor': '#f9f9f9',
     'fontWeight': 'bold'
     })
+    ,html.Button("Reset View", id="reset-button", n_clicks=0)
     ,dcc.Graph(id = 'waterfall-graph')
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
     ,dcc.Store(id='chart-mode', data='main')
-    ,html.Button("Reset View", id="reset-button", n_clicks=0)
     ,dash_table.DataTable(
     id='events-table'
     ,columns=[
@@ -106,7 +107,6 @@ app.layout = html.Div([
     ,data=df_events.to_dict('records')
     ,style_cell={'whiteSpace': 'normal', 'height': 'auto'}
     )
-    # ,html.Div(id='page-counter', style={'marginTop': '10px'})
     ,html.Br()
     ,html.Br()
     ,html.Br()
@@ -158,8 +158,6 @@ def update_chart(date_range, relayoutData, mode, clickData):
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
     
-    # df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
-
     if mode == 'detail' and clickData:
         clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
         df_filtered = df_events[df_events['date'] == clicked_date]
@@ -182,7 +180,6 @@ def update_chart(date_range, relayoutData, mode, clickData):
         )
         return fig
 
-    # Priority 2: Zoom selection via drag
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
@@ -190,7 +187,6 @@ def update_chart(date_range, relayoutData, mode, clickData):
     else:
         df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
     
-    # Create bar chart
     fig = go.Figure(data = [go.Bar(
         x = df_filtered['date']          
         ,y = df_filtered['net_score']
