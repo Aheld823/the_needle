@@ -76,7 +76,6 @@ def get_articles(urls):
                                                   ,'needle_rating':[needle_rating]
                                                   ,'url':[url]
                                                   })
-                    print(df_scores_temp)
                     df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
 
             
@@ -127,7 +126,6 @@ def get_articles(urls):
                                                   ,'needle_rating':[needle_rating]
                                                   ,'url':[url]
                                                   })
-                    print(df_scores_temp)
                     df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
 
                 else:
