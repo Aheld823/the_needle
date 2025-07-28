@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 options = Options()
 options.add_argument('--headless')
 
-def get_article_urls():
+def get_article_urls(limit):
     urls = []
     page_number = 1 # temp override
     driver = webdriver.Chrome(options=options)
@@ -41,6 +41,9 @@ def get_article_urls():
                     href = anchor['href']
                     urls = urls + [href]
                     # print(f"Article {idx} - Figure link: {href}")
-
-        page_number += 1
+        if limit == page_number:
+            False
+            break
+        else:
+            page_number += 1
     return urls
