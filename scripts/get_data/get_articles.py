@@ -14,7 +14,6 @@ def get_articles(urls):
     driver = webdriver.Chrome(options=options)
     df_events = pd.DataFrame()
     df_scores = pd.DataFrame()
-
     for id, url in enumerate(urls,1):
         # Extract list of items
         print(url)
@@ -39,14 +38,18 @@ def get_articles(urls):
         # Articles are inconsistently formatted. Sometimes it's a bullet list, sometimes it's just paragraphs
         ## Bullet list extraction
         list_object = soup.find('ul', class_='wp-block-list')
+        entry_div = soup.find('div', class_='entry-content')
+
         
         if list_object:
+            entry_div = None
             list_items = list_object.find_all('li')
+            idx = 1
             
-            for idx, li in enumerate(list_items, 1):
+            for  li in list_items:
                 text = li.get_text(strip=False)
                 event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
-                score_match = re.search(r"Today’s score:\s*(-?\d+)", text) # regex to get net score for article
+                score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text) # regex to get net score for article
                 needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
                 
                 if event_match:
@@ -62,6 +65,7 @@ def get_articles(urls):
                                             ,'url':[url]
                                             })
                     df_events = pd.concat([df_events,df_events_temp],axis=0)
+                    idx += 1
 
                 elif score_match and needle_match:
                     net_score = int(score_match.group(1))
@@ -72,11 +76,13 @@ def get_articles(urls):
                                                   ,'needle_rating':[needle_rating]
                                                   ,'url':[url]
                                                   })
+                    print(df_scores_temp)
                     df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
+
             
                 else:
                     pass
-                    # print(f"Item {idx} didn’t match expected formats.")
+                    # print(f"Item {idx} didn’t match expected formats in list")
             
             else:
                 pass
@@ -85,15 +91,15 @@ def get_articles(urls):
                 
         ## Paragraph extraction
         ### Can use the same extraction methods but need to access the content slightly different
-        entry_div = soup.find('div', class_='entry-content')
         
-        if entry_div:
+        elif entry_div:
             paragraphs = entry_div.find_all('p')
+            idx = 1
             
-            for idx, p in enumerate(paragraphs, 1):
+            for p in paragraphs:
                 text = p.get_text(strip=False)
                 event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
-                score_match = re.search(r"Today’s score:\s*(-?\d+)", text) # regex to get net score for article
+                score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text)
                 needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
                 # print(f"Paragraph {idx}: {p.get_text(strip=False)}")
                 
@@ -110,6 +116,7 @@ def get_articles(urls):
                                             ,'url':[url]
                                             })
                     df_events = pd.concat([df_events,df_events_temp],axis=0)
+                    idx += 1
 
                 elif score_match and needle_match:
                     net_score = int(score_match.group(1))
@@ -120,11 +127,12 @@ def get_articles(urls):
                                                   ,'needle_rating':[needle_rating]
                                                   ,'url':[url]
                                                   })
+                    print(df_scores_temp)
                     df_scores = pd.concat([df_scores,df_scores_temp],axis=0)
 
                 else:
                     pass
-                    # print(f"Item {idx} didn’t match expected formats.")
+                    # print(f"Item {idx} didn’t match expected formats in paragraph.")
         
         else:
             pass
