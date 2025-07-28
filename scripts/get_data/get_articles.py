@@ -42,7 +42,7 @@ def get_articles(urls):
 
         
         if list_object:
-            entry_div = None
+            # entry_div = None
             list_items = list_object.find_all('li')
             idx = 1
             
@@ -51,7 +51,7 @@ def get_articles(urls):
                 event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
                 score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text) # regex to get net score for article
                 needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
-                
+
                 if event_match:
                     title = event_match.group(1).strip()
                     description = event_match.group(2).strip()
@@ -91,7 +91,7 @@ def get_articles(urls):
         ## Paragraph extraction
         ### Can use the same extraction methods but need to access the content slightly different
         
-        elif entry_div:
+        if entry_div:
             paragraphs = entry_div.find_all('p')
             idx = 1
             
@@ -101,7 +101,7 @@ def get_articles(urls):
                 score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text)
                 needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
                 # print(f"Paragraph {idx}: {p.get_text(strip=False)}")
-                
+
                 if event_match:
                     title = event_match.group(1).strip()
                     description = event_match.group(2).strip()
@@ -135,6 +135,6 @@ def get_articles(urls):
         else:
             pass
             # print("No <div class='entry-content'> found.")
-
+    
     return df_events, df_scores
 
