@@ -10,7 +10,7 @@ os.makedirs('../input/', exist_ok=True)
 os.makedirs('../output/', exist_ok=True)
 
 def main():
-    urls = get_article_urls.get_article_urls()
+    urls = get_article_urls.get_article_urls(limit = None)
     # urls = urls[:6] # temp override to get one page of results at a time
     df_events, df_scores = get_articles.get_articles(urls)
     
@@ -31,7 +31,7 @@ def main():
                                 ,'net_score': int
                                 ,'needle_rating':int
                                 ,'url':'object'})
-    df_scores['needle_rating_previous'] = df_scores['needle_rating'] - df_scores['net_score'] 
+    df_scores['needle_rating_previous'] = df_scores['needle_rating'].shift(-1)
     
     df_events.to_csv('../input/events.csv')
     df_scores.to_csv('../input/scores.csv')
