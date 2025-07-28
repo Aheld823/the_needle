@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc, callback, Output, Input, dash_table
+from dash import Dash, html, dcc, callback, Output, Input, dash_table, State, callback_context
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -61,6 +61,10 @@ df_events['title_desc'] = (
 df_events['links'] = (
     '**[Link](' + df_events['url'] +')**'
 )
+df_events['color'] = df_events['score'].apply(
+    lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
+)
+
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
@@ -75,6 +79,9 @@ app.layout = html.Div([
     )
     ,dcc.Graph(id = 'waterfall-graph')
     ,dcc.Store(id='click-store', data=None)
+    ,dcc.Store(id='relayout-store', data={})
+    ,dcc.Store(id='chart-mode', data='main')
+    ,html.Button("Reset View", id="reset-button", n_clicks=0)
     ,dash_table.DataTable(
     id='events-table'
     ,columns=[
@@ -99,18 +106,54 @@ app.layout = html.Div([
     ,html.Br()
 ])
 
-
 # Callbacks
 @app.callback(
     Output("waterfall-graph", "figure"),
-    Input("date-slider", "value")
+    Input("date-slider", "value"),
+    Input('relayout-store', 'data'),
+    Input("chart-mode", "data"),
+    Input("click-store", "data")
 )
-def update_chart(date_range):
+def update_chart(date_range, relayoutData, mode, clickData):
     start_ts, end_ts = date_range
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
     
-    df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
+    # df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
+
+    if mode == 'detail' and clickData:
+        clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        df_filtered = df_events[df_events['date'] == clicked_date]
+
+        fig = go.Figure(data = [go.Bar(
+        x = df_filtered['event_id']          
+        ,y = df_filtered['score']
+        ,base = 0      
+        ,marker_color = df_filtered['color']
+        ,customdata = df_filtered[['title']]
+        ,hovertemplate = 
+                "<b>Title:</b> %{customdata[0]}<br>"
+                +"<b>Date:</b> %{x}<br>" 
+                +"<b>Score:</b> %{y}<br>"
+        # ,width = 0.5
+        )])
+        fig.update_layout(
+        # title = "Open–Close Bar Chart",
+        yaxis_title = "Needle Score",
+        xaxis_title = "Date",
+        bargap = 0
+        # ,dragmode = 'zoom'
+        # ,doubleclick = 'none'
+        )
+        return fig
+
+    # Priority 2: Zoom selection via drag
+    if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
+        df_filtered = df_scores[df_scores['date'].between(zoom_start, zoom_end)]
+    else:
+        df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
     
     # Create bar chart
     fig = go.Figure(data = [go.Bar(
@@ -131,7 +174,7 @@ def update_chart(date_range):
     yaxis_title = "Needle Score",
     xaxis_title = "Date",
     bargap = 0
-    ,dragmode = 'zoom'
+    # ,dragmode = 'zoom'
     # ,doubleclick = 'none'
     )
     
@@ -139,26 +182,44 @@ def update_chart(date_range):
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
     # fig.show(config={'doubleClick': False})
 
-
     return fig
 
-@app.callback(
-    Output('reset-signal', 'data'),
-    Input('waterfall-graph', 'relayoutData')
-)
-def detect_double_click(relayoutData):
-    return relayoutData.get('xaxis.autorange') if relayoutData else False
+# @app.callback(
+#     Output('click-store','data'),
+#     Input('waterfall-graph','clickData'),
+#     Input('reset-button','n_clicks'),
+#     prevent_initial_call=True
+# )
+# def store_click(clickData, n_clicks):
+#     triggered = callback_context.triggered[0]['prop_id']
+#     if triggered == 'reset-button.n_clicks':
+#         return None
+#     return clickData
 
+@app.callback(
+    Output('click-store','data'),
+    Output('chart-mode','data'),
+    Input('waterfall-graph','clickData'),
+    Input('reset-button','n_clicks'),
+    prevent_initial_call=True
+)
+def handle_click(clickData, n_clicks):
+    triggered = callback_context.triggered[0]['prop_id']
+    if triggered == 'reset-button.n_clicks':
+        return None, 'main'
+    return clickData, 'detail'
 
 @app.callback(
-    Output('click-store', 'data'),
-    Input('waterfall-graph', 'clickData'),
-    Input('waterfall-graph', 'relayoutData')
+    Output('relayout-store','data'),
+    Input('waterfall-graph','relayoutData'),
+    Input('reset-button','n_clicks'),
+    prevent_initial_call=True
 )
-def manage_click(clickData, relayoutData):
-    if relayoutData and relayoutData.get('xaxis.autorange'):
-        return None  # Clear selection on double click
-    return clickData
+def store_relay(relayoutData, n_clicks):
+    triggered = callback_context.triggered[0]['prop_id']
+    if triggered == 'reset-button.n_clicks':
+        return {}
+    return relayoutData
 
 @app.callback(
     Output('events-table', 'data'),
@@ -167,11 +228,9 @@ def manage_click(clickData, relayoutData):
     Input('events-table', "page_size"),
     Input('date-slider', 'value'),
     Input('click-store', 'data'),
-    Input('waterfall-graph', 'relayoutData') 
+    Input('relayout-store', 'data')
 )
-def update_table(page_current, page_size, date_range, clickData, relayoutData):
-    # df_filtered = df_events.copy()
-    
+def update_table(page_current, page_size, date_range, clickData, relayoutData):    
     start_ts, end_ts = date_range
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
@@ -187,6 +246,9 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
         df_filtered = df_events[df_events['date'].between(zoom_start, zoom_end)]
+        if clickData and 'points' in clickData:
+            clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+            df_filtered = df_events[df_events['date'] == clicked_date]
 
     # Priority 3: Bar click
     elif clickData and 'points' in clickData:
@@ -217,5 +279,3 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
 
 if __name__ == "__main__":
     app.run(debug=True)
-    # app.run(debug=False)
-    # app.server_run()
