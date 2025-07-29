@@ -6,10 +6,11 @@ import pandas as pd
 import os
 import datetime as datetime
 
+# Initial data wrangling for the app
 df_events = pd.read_excel('input/events.xlsx')
 df_scores = pd.read_excel('input/scores.xlsx')
 
-# Create base start point and setting colors 
+## Create base start point and setting colors 
 df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
 df_scores['base'] = df_scores[['needle_rating_previous', 'needle_rating']].min(axis=1)
 
@@ -17,12 +18,12 @@ df_scores['color'] = df_scores['net_score'].apply(
     lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
 )
 
-# Create y variable such that those with net_score == 0 show up on the chart
+## Create y variable such that those with net_score == 0 show up on the chart
 df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'y'] = 1.0
 
-# Find gaps in events
+## Find gaps in events so we can exclude them in the future
 dt_obs = df_scores['date'].dt.normalize()
 dt_all = pd.date_range(start=dt_obs.min(), end=dt_obs.max(), freq='D')
 dt_breaks = [d for d in dt_all if d not in dt_obs.values]
@@ -34,7 +35,7 @@ marks = {
     if i % 7 == 0 or d == dt_all[-1] or d == dt_all[0]  # every 10th + first/last
 }
 
-# Creates text for table
+## Creates text for table
 df_events['title_desc'] = (
     '**' + df_events['title'] + '** \n\n' + df_events['description']
 )
@@ -48,31 +49,26 @@ df_events['color'] = df_events['score'].apply(
 # Initiate App
 app = Dash(__name__, suppress_callback_exceptions=True)
 
-# App layout
+## Set up App layout
 app.layout = html.Div([
     html.H4('The Needle Dashboard')
     ,html.Div([
         dcc.RangeSlider(
-            id='date-slider',
-            min=int(dt_all[0].timestamp()),
-            max=int(dt_all[-1].timestamp()),
-            value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())],
-            marks=marks
+            id='date-slider'
+            ,min=int(dt_all[0].timestamp())
+            ,max=int(dt_all[-1].timestamp())
+            ,value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+            ,marks=marks
         )
-    ], id='slider-container')
-        
-    ,html.Div(id='needle-rating-box', style={
-    'marginTop': '10px',
-    'padding': '10px',
-    'border': '1px solid #ccc',
-    'backgroundColor': '#f9f9f9',
-    'fontWeight': 'bold'
-    })
+    ], id='slider-container')   
+    ,html.Div(id='needle-rating-box')
     ,html.Button("Reset View", id="reset-button", n_clicks=0)
     ,html.Div([
-        html.Button("← Previous", id="prev-day", n_clicks=0),
-        html.Button("Next →",     id="next-day", n_clicks=0)
-    ], id='detail-nav-buttons') 
+        html.Button("← Previous", id="prev-day", n_clicks=0)
+        ,html.Button("Next →",     id="next-day", n_clicks=0)
+    ]
+    , id='detail-nav-buttons'
+    ) 
     ,dcc.Graph(id = 'waterfall-graph')
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
@@ -100,11 +96,13 @@ app.layout = html.Div([
     ,html.Br()
 ])
 
-# Callbacks
+
+## Callbacks 
+### Show/hide buttons and slider depending on mode
 @app.callback(
-    Output('slider-container', 'style'),
-    Output('detail-nav-buttons', 'style'),
-    Input('chart-mode', 'data')
+    Output('slider-container', 'style')
+    ,Output('detail-nav-buttons', 'style')
+    ,Input('chart-mode', 'data')
 )
 def toggle_detail_controls(mode):
     if mode == 'detail':
@@ -113,18 +111,21 @@ def toggle_detail_controls(mode):
     # main mode: show slider, hide buttons
     return {'display': 'block'}, {'display': 'none'}
 
+
+### Determine value for needle-rating-box
 @app.callback(
-    Output('needle-rating-box', 'children'),
-    Input('date-slider', 'value'),
-    Input('relayout-store', 'data'),
-    Input('chart-mode', 'data'),
-    Input('click-store', 'data')
+    Output('needle-rating-box', 'children')
+    ,Input('date-slider', 'value')
+    ,Input('relayout-store', 'data')
+    ,Input('chart-mode', 'data')
+    ,Input('click-store', 'data')
 )
 def update_rating_text(date_range, relayoutData, mode, clickData):
     start_ts, end_ts = date_range
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
     
+    # Filter on zoom
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
@@ -150,6 +151,8 @@ def update_rating_text(date_range, relayoutData, mode, clickData):
     else:
         return "No rating available for current filter"
 
+
+### Display/filter waterfall-graph, toggle to detail mode
 @app.callback(
     Output("waterfall-graph", "figure"),
     Input("date-slider", "value"),
@@ -162,6 +165,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
     
+    # Toggle to detail mode
     if mode == 'detail' and clickData:
         clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
         df_filtered = df_events[df_events['date'] == clicked_date]
@@ -184,6 +188,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
         )
         return fig
 
+    # Filter on zoom
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
@@ -191,6 +196,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
     else:
         df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
     
+    # Build figure
     fig = go.Figure(data = [go.Bar(
         x = df_filtered['date']          
         ,y = df_filtered['y']
@@ -211,6 +217,9 @@ def update_chart(date_range, relayoutData, mode, clickData):
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
 
     return fig
+
+
+### Controls data storage and output
 @app.callback(
     Output('click-store', 'data'),
     Output('chart-mode', 'data'),
@@ -225,17 +234,17 @@ def update_chart(date_range, relayoutData, mode, clickData):
 def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, mode, stored_click):
     triggered = callback_context.triggered[0]['prop_id']
 
-    # 1) Reset always wins
+    # Reset button trumps all
     if triggered == 'reset-button.n_clicks':
         return None, 'main'
 
-    # 2) First bar-click enters detail mode
+    # Clicking on bar will trigger detailed mode
     if triggered == 'waterfall-graph.clickData':
         if mode == 'detail':
             raise PreventUpdate
         return clickData, 'detail'
 
-    # 3) In detail mode, prev/next navigate dates
+    # Navigation within detailed mode
     if mode == 'detail' and stored_click and 'points' in stored_click:
         # build a list of all normalized dates
         dates = list(dt_obs)
@@ -247,17 +256,16 @@ def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, m
         elif triggered == 'prev-day.n_clicks':
             new_idx = min(len(dates) - 1, idx + 1)
         else:
-            # some other trigger—we should not get here
             raise PreventUpdate
 
         new_date = dates[new_idx]
-        # mimic the clickData structure your other callbacks expect
         new_click = {'points': [{'x': new_date.strftime('%Y-%m-%d')}]}
         return new_click, 'detail'
 
-    # anything else (e.g. prev/next while not in detail) → no change
     raise PreventUpdate
 
+
+### Controls storage of zoom information
 @app.callback(
     Output('relayout-store','data'),
     Input('waterfall-graph','relayoutData'),
@@ -270,6 +278,8 @@ def store_relay(relayoutData, n_clicks):
         return {}
     return relayoutData
 
+
+### Controls filtering of table
 @app.callback(
     Output('events-table', 'data'),
     Output('events-table', 'page_count'),
@@ -286,11 +296,11 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
 
     df_filtered = df_events.copy()
 
-    # Priority 1: Reset view on double-click
+    ### If reset then default to range slider filter
     if relayoutData and relayoutData.get('xaxis.autorange') == True:
         df_filtered = df_events[df_events['date'].between(start_date, end_date)]
 
-    # Priority 2: Zoom selection via drag
+    # If there is a zoom then filter on that
     elif relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
@@ -299,7 +309,7 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
             clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
             df_filtered = df_events[df_events['date'] == clicked_date]
 
-    # Priority 3: Bar click
+    # If there is a click then filter to that
     elif clickData and 'points' in clickData:
         clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
         df_filtered = df_events[df_events['date'] == clicked_date]
@@ -308,7 +318,7 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
     else:
         df_filtered = df_events[df_events['date'].between(start_date, end_date)]
 
-    # Pagination
+    # Controls pagination display for the table
     total_records = len(df_filtered)
     total_pages = max(1, -(-total_records // page_size))  # ceiling division
     page_data = df_filtered.iloc[
@@ -318,6 +328,8 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
     page_text = f"Page {page_current + 1} of {total_pages}"
 
     return page_data, total_pages
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
