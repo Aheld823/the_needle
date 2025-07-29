@@ -52,6 +52,8 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 ## Set up App layout
 app.layout = html.Div([
     html.H4('The Needle Dashboard')
+    ,html.Div(id='needle-rating-box')
+    ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
         dcc.RangeSlider(
             id='date-slider'
@@ -60,19 +62,15 @@ app.layout = html.Div([
             ,value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
             ,marks=marks
         )
-    ], id='slider-container')   
-    ,html.Div(id='needle-rating-box')
-    ,html.Button("Reset View", id="reset-button", n_clicks=0)
+    ], id='slider-container')  
+    
     ,html.Div([
         html.Button("← Previous", id="prev-day", n_clicks=0)
         ,html.Button("Next →",     id="next-day", n_clicks=0)
     ]
     , id='detail-nav-buttons'
-    ) 
-    ,dcc.Graph(id = 'waterfall-graph')
-    ,dcc.Store(id='click-store', data=None)
-    ,dcc.Store(id='relayout-store', data={})
-    ,dcc.Store(id='chart-mode', data='main')
+    )  
+    ,html.Button("Reset View", id="reset-button", n_clicks=0)
     ,dash_table.DataTable(
     id='events-table'
     ,columns=[
@@ -89,6 +87,10 @@ app.layout = html.Div([
     ,data=df_events.to_dict('records')
     ,style_cell={'whiteSpace': 'normal', 'height': 'auto'}
     )
+    
+    ,dcc.Store(id='click-store', data=None)
+    ,dcc.Store(id='relayout-store', data={})
+    ,dcc.Store(id='chart-mode', data='main')
     ,html.Br()
     ,html.Br()
     ,html.Br()
