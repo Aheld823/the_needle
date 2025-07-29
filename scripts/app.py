@@ -51,13 +51,16 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 # App layout
 app.layout = html.Div([
     html.H4('The Needle Dashboard')
-    ,dcc.RangeSlider(
-        id = 'date-slider'
-        ,min = int(dt_all[0].timestamp())
-        ,max = int(dt_all[-1].timestamp())
-        ,value = [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
-        ,marks = marks
-    )
+    ,html.Div([
+        dcc.RangeSlider(
+            id='date-slider',
+            min=int(dt_all[0].timestamp()),
+            max=int(dt_all[-1].timestamp()),
+            value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())],
+            marks=marks
+        )
+    ], id='slider-container')
+        
     ,html.Div(id='needle-rating-box', style={
     'marginTop': '10px',
     'padding': '10px',
@@ -66,6 +69,10 @@ app.layout = html.Div([
     'fontWeight': 'bold'
     })
     ,html.Button("Reset View", id="reset-button", n_clicks=0)
+    ,html.Div([
+        html.Button("← Previous", id="prev-day", n_clicks=0),
+        html.Button("Next →",     id="next-day", n_clicks=0)
+    ], id='detail-nav-buttons') 
     ,dcc.Graph(id = 'waterfall-graph')
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
@@ -94,6 +101,18 @@ app.layout = html.Div([
 ])
 
 # Callbacks
+@app.callback(
+    Output('slider-container', 'style'),
+    Output('detail-nav-buttons', 'style'),
+    Input('chart-mode', 'data')
+)
+def toggle_detail_controls(mode):
+    if mode == 'detail':
+        # hide slider, show nav buttons
+        return {'display': 'none'}, {'display': 'block', 'marginTop':'10px'}
+    # main mode: show slider, hide buttons
+    return {'display': 'block'}, {'display': 'none'}
+
 @app.callback(
     Output('needle-rating-box', 'children'),
     Input('date-slider', 'value'),
@@ -192,22 +211,52 @@ def update_chart(date_range, relayoutData, mode, clickData):
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
 
     return fig
-
 @app.callback(
-    Output('click-store','data'),
-    Output('chart-mode','data'),
-    Input('waterfall-graph','clickData'),
+    Output('click-store', 'data'),
+    Output('chart-mode', 'data'),
+    Input('waterfall-graph', 'clickData'),
+    Input('prev-day', 'n_clicks'),
+    Input('next-day', 'n_clicks'),
+    Input('reset-button', 'n_clicks'),
     State('chart-mode', 'data'),
-    Input('reset-button','n_clicks'),
+    State('click-store', 'data'),
     prevent_initial_call=True
 )
-def handle_click(clickData, mode, n_clicks):
+def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, mode, stored_click):
     triggered = callback_context.triggered[0]['prop_id']
+
+    # 1) Reset always wins
     if triggered == 'reset-button.n_clicks':
         return None, 'main'
-    if mode == 'detail':
-        raise PreventUpdate
-    return clickData, 'detail'
+
+    # 2) First bar-click enters detail mode
+    if triggered == 'waterfall-graph.clickData':
+        if mode == 'detail':
+            raise PreventUpdate
+        return clickData, 'detail'
+
+    # 3) In detail mode, prev/next navigate dates
+    if mode == 'detail' and stored_click and 'points' in stored_click:
+        # build a list of all normalized dates
+        dates = list(dt_obs)
+        current = pd.to_datetime(stored_click['points'][0]['x']).normalize()
+        idx = dates.index(current)
+
+        if triggered == 'next-day.n_clicks':
+            new_idx = max(0, idx - 1)
+        elif triggered == 'prev-day.n_clicks':
+            new_idx = min(len(dates) - 1, idx + 1)
+        else:
+            # some other trigger—we should not get here
+            raise PreventUpdate
+
+        new_date = dates[new_idx]
+        # mimic the clickData structure your other callbacks expect
+        new_click = {'points': [{'x': new_date.strftime('%Y-%m-%d')}]}
+        return new_click, 'detail'
+
+    # anything else (e.g. prev/next while not in detail) → no change
+    raise PreventUpdate
 
 @app.callback(
     Output('relayout-store','data'),
