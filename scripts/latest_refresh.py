@@ -11,10 +11,7 @@ os.makedirs('../output/', exist_ok=True)
 
 def main():
     urls = get_article_urls.get_article_urls(limit = 1)
-    print(len(urls))
     df_events, df_scores = get_articles.get_articles(urls)
-    print(len(df_events))
-    print(len(df_scores))
     
     df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
     df_events['date'] = df_events['date'].dt.tz_localize(None)
@@ -25,6 +22,7 @@ def main():
                                 ,'description': 'object'
                                 ,'score':int
                                 ,'url':'object'})
+    df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y') 
     
     df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
     df_scores['date'] = df_scores['date'].dt.tz_localize(None)
