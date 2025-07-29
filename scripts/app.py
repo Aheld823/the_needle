@@ -9,40 +9,18 @@ import datetime as datetime
 df_events = pd.read_excel('input/events.xlsx')
 df_scores = pd.read_excel('input/scores.xlsx')
 
-# Date conversation (can probably get rid of eventually)
-# df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
-# df_scores['date'] = df_scores['date'].dt.tz_localize(None)
-# df_scores = df_scores.astype({'article_id': 'object'
-#                             ,'date': 'datetime64[ns]'
-#                             ,'net_score': int
-#                             ,'needle_rating':int
-#                             ,'url':'object'})
-# df_scores['date'] = df_scores['date'].dt.normalize()
-
-# df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
-# df_events['date'] = df_events['date'].dt.tz_localize(None)
-# df_events = df_events.astype({'article_id': 'object'
-#                             ,'date': 'datetime64[ns]'
-#                             ,'event_id':'object'
-#                             ,'title':'object'
-#                             ,'description':'object'
-#                             ,'score': int
-#                             ,'url':'object'})
-# df_events['date'] = df_events['date'].dt.normalize()
-# df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y') 
-### 
-
 # Create base start point and setting colors 
+df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
 df_scores['base'] = df_scores[['needle_rating_previous', 'needle_rating']].min(axis=1)
 
 df_scores['color'] = df_scores['net_score'].apply(
     lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
 )
 
-# NEED TO CLEAN THIS UP SO THEY DON'T HAVE NET SCORE OF 1
+# Create y variable such that those with net_score == 0 show up on the chart
+df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
-df_scores.loc[zero_mask, 'net_score'] = 1.0
-# df_scores.loc[zero_mask, 'base'] = df_scores.loc[zero_mask, 'base'] - 1
+df_scores.loc[zero_mask, 'y'] = 1.0
 
 # Find gaps in events
 dt_obs = df_scores['date'].dt.normalize()
@@ -67,6 +45,7 @@ df_events['color'] = df_events['score'].apply(
     lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
 )
 
+# Initiate App
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # App layout
@@ -137,7 +116,13 @@ def update_rating_text(date_range, relayoutData, mode, clickData):
     # If in detail mode, filter down to clicked date
     if mode == 'detail' and clickData:
         clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        clicked_date_str = clicked_date.strftime('%m/%d/%y')
         df_filtered = df_filtered[df_filtered['date'] == clicked_date]
+        if not df_filtered.empty:
+            current_rating = df_filtered.sort_values('date', ascending=False)['needle_rating'].iloc[0]
+            return f" Needle Rating on {clicked_date_str}: {current_rating}"
+        else:
+            return f"No rating available for {clicked_date_str}"
 
     # Find latest available rating (sorted by date descending)
     if not df_filtered.empty:
@@ -170,7 +155,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
         ,customdata = df_filtered[['title']]
         ,hovertemplate = 
                 "<b>Title:</b> %{customdata[0]}<br>"
-                +"<b>Date:</b> %{x}<br>" 
+                +"<b>Event:</b> %{x}<br>" 
                 +"<b>Score:</b> %{y}<br>"
         )])
         fig.update_layout(
@@ -189,7 +174,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
     
     fig = go.Figure(data = [go.Bar(
         x = df_filtered['date']          
-        ,y = df_filtered['net_score']
+        ,y = df_filtered['y']
         ,base = df_filtered['needle_rating_previous']       
         ,marker_color = df_filtered['color']
         ,customdata = df_filtered[['needle_rating_previous','needle_rating','net_score']]
@@ -273,13 +258,6 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
     # Fallback: use slider range
     else:
         df_filtered = df_events[df_events['date'].between(start_date, end_date)]
-
-    # Filter data based on slider if desired
-    # start_ts, end_ts = date_range
-    # start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
-    # end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
-    
-    # df_filtered = df_events[df_events['date'].between(start_date, end_date)]
 
     # Pagination
     total_records = len(df_filtered)
