@@ -24,6 +24,9 @@ def main():
                                 ,'url':'object'})
     df_events['date'] = df_events['date'].dt.normalize()
     df_events['date_str'] = df_events['date'].dt.strftime('%m/%d/%y')
+    # Invert artcile_id scale so that the first article is #1
+    df_events['article_id'] = df_events['article_id'].rank(method='first', ascending=False).astype(int)
+
     
     df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
     df_scores['date'] = df_scores['date'].dt.tz_localize(None)
@@ -34,7 +37,9 @@ def main():
                                 ,'url':'object'})
     df_scores['date'] = df_scores['date'].dt.normalize()
     df_scores['needle_rating_previous'] = df_scores['needle_rating'].shift(-1)
-    
+    # Invert artcile_id scale so that the first article is #1
+    df_scores['article_id'] = df_scores['article_id'].rank(method='first', ascending=False).astype(int)
+
     df_events.to_excel('../input/events.xlsx')
     df_scores.to_excel('../input/scores.xlsx')
 
