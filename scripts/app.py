@@ -15,7 +15,7 @@ df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
 df_scores['base'] = df_scores[['needle_rating_previous', 'needle_rating']].min(axis=1)
 
 df_scores['color'] = df_scores['net_score'].apply(
-    lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
+    lambda x: '#b8e6bf' if x > 0 else '#d63678' if x < 0 else '#949494'
 )
 
 ## Create y variable such that those with net_score == 0 show up on the chart
@@ -43,7 +43,7 @@ df_events['links'] = (
     '**[Link](' + df_events['url'] +')**'
 )
 df_events['color'] = df_events['score'].apply(
-    lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
+    lambda x: '#b8e6bf' if x > 0 else '#d63678' if x < 0 else '#949494'
 )
 
 # Initiate App
@@ -51,7 +51,7 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 
 ## Set up App layout
 app.layout = html.Div([
-    html.H4('The Needle Dashboard')
+    html.H1('THE NEEDLE DASHBOARD')
     ,html.Div(id='needle-rating-box')
     ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
@@ -61,9 +61,10 @@ app.layout = html.Div([
             ,max=int(dt_all[-1].timestamp())
             ,value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
             ,marks=marks
+            ,className='date-slider'
         )
-    ], id='slider-container')  
-    
+    ], id='slider-container'
+    ,className='slider-wrapper')  
     ,html.Div([
         html.Button("← Previous", id="prev-day", n_clicks=0)
         ,html.Button("Next →",     id="next-day", n_clicks=0)
@@ -71,7 +72,7 @@ app.layout = html.Div([
     , id='detail-nav-buttons'
     )  
     ,html.Button("Reset View", id="reset-button", n_clicks=0)
-    ,dash_table.DataTable(
+    ,html.Div([dash_table.DataTable(
     id='events-table'
     ,columns=[
         {"name": "Date", "id": "date_str"}
@@ -81,22 +82,50 @@ app.layout = html.Div([
         ,{"name": "Score", "id":"score"}
         ,{"name": "Links", "id": "links", "type": "text", "presentation": "markdown"}
     ]
+    ,style_cell_conditional=[
+    {'if': {'column_id': 'date_str'}, 'width': '50px'},
+    {'if': {'column_id': 'article_id'}, 'width': '75px'},
+    {'if': {'column_id': 'event_id'}, 'width': '75px'},
+    # {'if': {'column_id': 'title_desc'}, 'width': '300px'},
+    {'if': {'column_id': 'score'}, 'width': '50px'},
+    {'if': {'column_id': 'links'}, 'width': '50px'},
+    ]
     ,page_current = 0
     ,page_size = 5
     ,page_action = 'custom'
     ,data=df_events.to_dict('records')
-    ,style_cell={'whiteSpace': 'normal', 'height': 'auto'}
+    ,style_cell={
+        'border':'none'
+        ,'borderBottom': '1px solid #cccccc'
+        ,'fontFamily': "Noto Sans, Helvetic, sans-serif"
+        ,'frontSize': '10px'
+        ,'whiteSpace': 'normal'
+        ,'height': 'auto'
+        ,'textAlign': 'left'
+        ,'backgroundColor': '#ffffff'
+        }
+    ,style_header={
+        'borderBottom': '2px solid #333333'
+        ,'fontFamily': 'Helvetica, sans-serif'
+        ,'fontSize': '15px'
+        ,'fontWeight': '600'
+        ,'textAlign': 'left'
+        ,'backgroundColor': '#ffffff'}
     )
-    
+    ]
+    )
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
     ,dcc.Store(id='chart-mode', data='main')
     ,html.Br()
     ,html.Br()
     ,html.Br()
-    ,html.Br()
-    ,html.Br()
-])
+], style={
+    'marginLeft': '10%',
+    'marginRight': '10%',
+    'padding': '10px',
+    'backgroundColor': '#fff9e6'
+})
 
 
 ## Callbacks 
@@ -142,16 +171,16 @@ def update_rating_text(date_range, relayoutData, mode, clickData):
         df_filtered = df_filtered[df_filtered['date'] == clicked_date]
         if not df_filtered.empty:
             current_rating = df_filtered.sort_values('date', ascending=False)['needle_rating'].iloc[0]
-            return f" Needle Rating on {clicked_date_str}: {current_rating}"
+            return html.Span([html.Strong(f"NEEDLE RATING ON {clicked_date_str}: "),str(current_rating)])
         else:
-            return f"No rating available for {clicked_date_str}"
+            return html.Span([html.Strong("NO RATING AVAILABLE FOR "),str(clicked_date_str)])
 
     # Find latest available rating (sorted by date descending)
     if not df_filtered.empty:
         latest_rating = df_filtered.sort_values('date', ascending=False)['needle_rating'].iloc[0]
-        return f"Current Needle Rating: {latest_rating}"
+        return html.Span([html.Strong("CURRRENT NEEDLE RATING: "),str(latest_rating)])
     else:
-        return "No rating available for current filter"
+        return html.Span([html.Strong("NO RATING AVILABLE FOR CURRENT FILTER")])
 
 
 ### Display/filter waterfall-graph, toggle to detail mode
@@ -178,16 +207,26 @@ def update_chart(date_range, relayoutData, mode, clickData):
         ,base = 0      
         ,marker_color = df_filtered['color']
         ,customdata = df_filtered[['title']]
+        ,name =''
         ,hovertemplate = 
                 "<b>Title:</b> %{customdata[0]}<br>"
                 +"<b>Event:</b> %{x}<br>" 
                 +"<b>Score:</b> %{y}<br>"
         )])
         fig.update_layout(
-        yaxis_title = "Needle Score",
-        xaxis_title = "Date",
-        bargap = 0
-        )
+        bargap = 0,
+        plot_bgcolor =  '#ffffff',
+        paper_bgcolor = '#fff9e6',
+        yaxis=dict(
+            title="Needle Score",
+            showgrid=True,
+            gridcolor='#e0e0e0'  
+        ),
+        xaxis=dict(
+            title="Event",
+            showgrid=True,
+            gridcolor='#e0e0e0'
+        ))
         return fig
 
     # Filter on zoom
@@ -214,8 +253,19 @@ def update_chart(date_range, relayoutData, mode, clickData):
     fig.update_layout(
     yaxis_title = "Needle Score",
     xaxis_title = "Date",
-    bargap = 0
-    )
+    bargap = 0,
+    plot_bgcolor =  '#ffffff',
+    paper_bgcolor = '#fff9e6',
+    yaxis=dict(
+        title="Needle Score",
+        showgrid=True,
+        gridcolor='#e0e0e0'  
+    ),
+    xaxis=dict(
+        title="Date",
+        showgrid=True,
+        gridcolor='#e0e0e0'
+    ))
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
 
     return fig

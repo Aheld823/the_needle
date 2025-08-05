@@ -1,0 +1,32 @@
+body {
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  background-color: #fff9e6;
+  margin: 0;
+  padding: 10;
+}
+.date-slider .rc-slider-track {
+    background-color: #333;  
+}
+
+.date-slider .rc-slider-handle {
+    border-color: #333;      
+    background-color: #ffffff;  
+}
+
+.date-slider .rc-slider-tooltip {
+    background-color: #333;
+    color: #fff;
+}
+/* .slider-wrapper {
+  margin: 10px auto;
+  width: 90%;
+} */
+/* .dash-table-container .dash-cell {
+  font-family: "Noto Sans","Helvetica","sans-serif";
+  font-size: 14px;
+}
+#events-table .dash-header-cell {
+  font-family: "Helvetica", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+} */
