@@ -1,32 +1,66 @@
 body {
   font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-  background-color: #fff9e6;
+  background-color: #ffffff;
   margin: 0;
   padding: 10;
 }
 .date-slider .rc-slider-track {
     background-color: #333;  
 }
-
 .date-slider .rc-slider-handle {
     border-color: #333;      
     background-color: #ffffff;  
 }
-
 .date-slider .rc-slider-tooltip {
     background-color: #333;
-    color: #fff;
+    color: #ffffff;
 }
-/* .slider-wrapper {
-  margin: 10px auto;
-  width: 90%;
-} */
-/* .dash-table-container .dash-cell {
-  font-family: "Noto Sans","Helvetica","sans-serif";
-  font-size: 14px;
+.dash-button {
+    background-color: #d63678; 
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    gap: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-bottom: 5px;
 }
-#events-table .dash-header-cell {
-  font-family: "Helvetica", sans-serif !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-} */
+.dash-button:hover {
+    background-color: #b8e6bf;
+}
+.dash-table-container .dash-spreadsheet-page {
+    justify-content: center;
+    padding: 10px;
+}
+.dash-table-container .page-number {
+    color: #808080;
+    font-size: 12px;
+    font-family: 'Noto Sans', 'Helvetic', 'sans-serif';
+    font-weight: bold;
+}
+.dash-table-container .page-number[style*="font-weight: bold"] {
+    color: #808080 !important;
+    text-decoration: underline;
+}
+.dash-table-container .previous-page,
+.dash-table-container .next-page,
+.dash-table-container .last-page,
+.dash-table-container .first-page {
+    background-color: #808080;
+    color: white;
+    border-radius: 6px;
+    padding: 6px 12px;
+    border: none;
+    cursor: pointer;
+}
+.dash-table-container .previous-page:hover,
+.dash-table-container .next-page:hover, 
+.dash-table-container .last-page:hover, 
+.dash-table-container .first-page:hover{
+    background-color: #808080;
+}

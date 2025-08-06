@@ -65,13 +65,18 @@ app.layout = html.Div([
         )
     ], id='slider-container'
     ,className='slider-wrapper')  
-    ,html.Div([
-        html.Button("← Previous", id="prev-day", n_clicks=0)
-        ,html.Button("Next →",     id="next-day", n_clicks=0)
+    ,html.Center([
+        html.Button("← Previous", id="prev-day", n_clicks=0, className='dash-button')
+        ,html.Button("Next →", id="next-day", n_clicks=0, className='dash-button')
     ]
     , id='detail-nav-buttons'
+    , className='detail-nav-buttons-container'
     )  
-    ,html.Button("Reset View", id="reset-button", n_clicks=0)
+    ,html.Center([html.Button("Reset View", id="reset-button", n_clicks=0, className='dash-button')
+    ]
+    , id='reset-button-container'
+    , className="reset-button-container"
+    )
     ,html.Div([dash_table.DataTable(
     id='events-table'
     ,columns=[
@@ -124,7 +129,7 @@ app.layout = html.Div([
     'marginLeft': '10%',
     'marginRight': '10%',
     'padding': '10px',
-    'backgroundColor': '#fff9e6'
+    'backgroundColor': '#ffffff'
 })
 
 
@@ -216,7 +221,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
         fig.update_layout(
         bargap = 0,
         plot_bgcolor =  '#ffffff',
-        paper_bgcolor = '#fff9e6',
+        paper_bgcolor = '#ffffff',
         yaxis=dict(
             title="Needle Score",
             showgrid=True,
@@ -255,7 +260,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
     xaxis_title = "Date",
     bargap = 0,
     plot_bgcolor =  '#ffffff',
-    paper_bgcolor = '#fff9e6',
+    paper_bgcolor = '#ffffff',
     yaxis=dict(
         title="Needle Score",
         showgrid=True,
