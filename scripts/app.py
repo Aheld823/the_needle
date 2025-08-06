@@ -53,6 +53,14 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 app.layout = html.Div([
     html.H1('THE NEEDLE DASHBOARD')
     ,html.Div(id='needle-rating-box')
+    ,html.Div([html.Button("Reset View", id="reset-button", n_clicks=0, className='dash-button')
+    ], style={
+        'display': 'flex',
+        'justifyContent': 'flex-end',
+        'padding': '10px'}
+    , id='reset-button-container'
+    , className="reset-button-container"
+    )
     ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
         dcc.RangeSlider(
@@ -63,7 +71,8 @@ app.layout = html.Div([
             ,marks=marks
             ,className='date-slider'
         )
-    ], id='slider-container'
+    ], style={'margin-bottom': '10px'}
+    , id='slider-container'
     ,className='slider-wrapper')  
     ,html.Center([
         html.Button("← Previous", id="prev-day", n_clicks=0, className='dash-button')
@@ -72,11 +81,6 @@ app.layout = html.Div([
     , id='detail-nav-buttons'
     , className='detail-nav-buttons-container'
     )  
-    ,html.Center([html.Button("Reset View", id="reset-button", n_clicks=0, className='dash-button')
-    ]
-    , id='reset-button-container'
-    , className="reset-button-container"
-    )
     ,html.Div([dash_table.DataTable(
     id='events-table'
     ,columns=[
@@ -91,7 +95,6 @@ app.layout = html.Div([
     {'if': {'column_id': 'date_str'}, 'width': '50px'},
     {'if': {'column_id': 'article_id'}, 'width': '75px'},
     {'if': {'column_id': 'event_id'}, 'width': '75px'},
-    # {'if': {'column_id': 'title_desc'}, 'width': '300px'},
     {'if': {'column_id': 'score'}, 'width': '50px'},
     {'if': {'column_id': 'links'}, 'width': '50px'},
     ]

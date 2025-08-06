@@ -15,6 +15,19 @@ body {
     background-color: #333;
     color: #ffffff;
 }
+/* .rc-slider-mark {
+    position: relative;
+} */
+.rc-slider-dot-active {
+    border-color: #808080;
+}
+.rc-slider-mark-text {
+    transform: rotate(45deg) !important;
+    transform-origin: top left !important;
+    /* white-space: nowrap; */
+    font-size: 12px;
+    margin-bottom: 10px;
+}
 .dash-button {
     background-color: #d63678; 
     color: white;
