@@ -71,7 +71,7 @@ app.layout = html.Div([
             ,marks=marks
             ,className='date-slider'
         )
-    ], style={'margin-bottom': '10px'}
+    ]
     , id='slider-container'
     ,className='slider-wrapper')  
     ,html.Center([
@@ -225,6 +225,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
         bargap = 0,
         plot_bgcolor =  '#ffffff',
         paper_bgcolor = '#ffffff',
+        margin={'t':30,'l':0,'b':0,'r':0},
         yaxis=dict(
             title="Needle Score",
             showgrid=True,
@@ -264,6 +265,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
     bargap = 0,
     plot_bgcolor =  '#ffffff',
     paper_bgcolor = '#ffffff',
+    margin={'t':30,'l':0,'b':0,'r':0},
     yaxis=dict(
         title="Needle Score",
         showgrid=True,
@@ -277,6 +279,33 @@ def update_chart(date_range, relayoutData, mode, clickData):
     fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
 
     return fig
+
+# Controls range slider
+@app.callback(
+    Output('date-slider', 'value'),
+    Input('relayout-store', 'data'),
+    Input('reset-button', 'n_clicks'),
+    prevent_initial_call=True
+)
+def sync_slider_with_zoom_or_reset(relayoutData, n_clicks):
+    ctx = callback_context
+
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if trigger_id == 'reset-button':
+        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+
+    if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]'])
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]'])
+        return [int(zoom_start.timestamp()), int(zoom_end.timestamp())]
+
+    elif relayoutData and relayoutData.get('xaxis.autorange') == True:
+        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+    
+    else:
+        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+
 
 
 ### Controls data storage and output
@@ -347,9 +376,10 @@ def store_relay(relayoutData, n_clicks):
     Input('events-table', "page_size"),
     Input('date-slider', 'value'),
     Input('click-store', 'data'),
+    State('chart-mode', 'data'),
     Input('relayout-store', 'data')
 )
-def update_table(page_current, page_size, date_range, clickData, relayoutData):    
+def update_table(page_current, page_size, date_range, clickData, mode, relayoutData):    
     start_ts, end_ts = date_range
     start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
     end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
@@ -357,7 +387,7 @@ def update_table(page_current, page_size, date_range, clickData, relayoutData):
     df_filtered = df_events.copy()
 
     ### If reset then default to range slider filter
-    if relayoutData and relayoutData.get('xaxis.autorange') == True:
+    if relayoutData and relayoutData.get('xaxis.autorange') == True and mode != 'detail':
         df_filtered = df_events[df_events['date'].between(start_date, end_date)]
 
     # If there is a zoom then filter on that

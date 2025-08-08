@@ -4,6 +4,12 @@ body {
   margin: 0;
   padding: 10;
 }
+.dash-graph{
+  padding: 0px;
+}
+.slider-wrapper{
+  margin-bottom: 30px;
+}
 .date-slider .rc-slider-track {
     background-color: #333;  
 }
