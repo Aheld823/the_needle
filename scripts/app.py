@@ -345,7 +345,7 @@ def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, m
     if mode == 'detail' and stored_click and 'points' in stored_click:
         # build a list of all normalized dates
         # dates = list(dt_obs_set)
-        dates = sorted(dt_obs_set)
+        dates = sorted(dt_obs_set, reverse=True)
         current = pd.to_datetime(stored_click['points'][0]['x']).normalize().tz_localize('UTC')
         idx = dates.index(current)
 
@@ -375,7 +375,7 @@ def update_nav_button_states(click_data, mode):
 
     current_date = pd.to_datetime(click_data['points'][0]['x']).normalize().tz_localize('UTC')
     # dates = list(dt_obs_set)
-    dates = sorted(dt_obs_set)
+    dates = sorted(dt_obs_set, reverse=True)
     idx = dates.index(current_date)
 
     disable_prev = idx >= len(dates) - 1  
