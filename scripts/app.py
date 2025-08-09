@@ -23,11 +23,17 @@ df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'y'] = 1.0
 
+## Fix time zones to avoid bad filtering
+df_scores['date'] = pd.to_datetime(df_scores['date'], errors='coerce').dt.tz_localize('UTC')
+df_events['date'] = pd.to_datetime(df_events['date'], errors='coerce').dt.tz_localize('UTC')
+
 ## Find gaps in events so we can exclude them in the future
 dt_obs = df_scores['date'].dt.normalize()
-dt_all = pd.date_range(start=dt_obs.min(), end=dt_obs.max(), freq='D')
-dt_breaks = [d for d in dt_all if d not in dt_obs.values]
-dt_breaks = pd.to_datetime(dt_breaks)
+dt_all = pd.date_range(start=dt_obs.min(), end=dt_obs.max(), freq='D', tz='UTC')
+dt_obs_set = set(dt_obs)
+dt_breaks = [d for d in dt_all if d not in dt_obs_set]
+# dt_breaks = [d for d in dt_all if d not in dt_obs.values]
+dt_breaks = pd.to_datetime(dt_breaks, utc=True)
 
 marks = {
     int(d.timestamp()): d.strftime('%m/%d/%y')
@@ -63,7 +69,7 @@ app.layout = html.Div([
     )
     ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
-        html.Div(id='slider-lock-indicator', style={'textAlign':'center','marginBottom': '10px'}),
+        html.Div(id='slider-lock-indicator', style={'textAlign':'left','marginBottom': '10px'}),
         dcc.RangeSlider(
             id='date-slider'
             ,min=int(dt_all[0].timestamp())
@@ -161,20 +167,20 @@ def toggle_detail_controls(mode):
 )
 def update_rating_text(date_range, relayoutData, mode, clickData):
     start_ts, end_ts = date_range
-    start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
-    end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
+    start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts, datetime.UTC))
+    end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts, datetime.UTC))
     
     # Filter on zoom
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
-        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
-        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]'], utc=True).normalize()
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]'], utc=True).normalize()
         df_filtered = df_scores[df_scores['date'].between(zoom_start, zoom_end)]
     else:
         df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
 
     # If in detail mode, filter down to clicked date
     if mode == 'detail' and clickData:
-        clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        clicked_date = pd.to_datetime(clickData['points'][0]['x'], utc=True).normalize()
         clicked_date_str = clicked_date.strftime('%m/%d/%y')
         df_filtered = df_filtered[df_filtered['date'] == clicked_date]
         if not df_filtered.empty:
@@ -201,12 +207,12 @@ def update_rating_text(date_range, relayoutData, mode, clickData):
 )
 def update_chart(date_range, relayoutData, mode, clickData):
     start_ts, end_ts = date_range
-    start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
-    end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
+    start_date = pd.to_datetime(start_ts, unit='s', utc=True)
+    end_date = pd.to_datetime(end_ts, unit='s', utc=True)
     
     # Toggle to detail mode
     if mode == 'detail' and clickData:
-        clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        clicked_date = pd.to_datetime(clickData['points'][0]['x'], utc=True).normalize()
         df_filtered = df_events[df_events['date'] == clicked_date]
 
         fig = go.Figure(data = [go.Bar(
@@ -240,15 +246,16 @@ def update_chart(date_range, relayoutData, mode, clickData):
 
     # Filter on zoom
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
-        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
-        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]'], utc=True).normalize()
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]'], utc=True).normalize()
         df_filtered = df_scores[df_scores['date'].between(zoom_start, zoom_end)]
+        df_filtered['date'] = df_filtered['date'].dt.tz_localize(None)
     else:
         df_filtered = df_scores[df_scores['date'].between(start_date, end_date)]
     
     # Build figure
     fig = go.Figure(data = [go.Bar(
-        x = df_filtered['date']          
+        x = df_filtered['date']    
         ,y = df_filtered['y']
         ,base = df_filtered['needle_rating_previous']       
         ,marker_color = df_filtered['color']
@@ -337,8 +344,9 @@ def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, m
     # Navigation within detailed mode
     if mode == 'detail' and stored_click and 'points' in stored_click:
         # build a list of all normalized dates
-        dates = list(dt_obs)
-        current = pd.to_datetime(stored_click['points'][0]['x']).normalize()
+        # dates = list(dt_obs_set)
+        dates = sorted(dt_obs_set)
+        current = pd.to_datetime(stored_click['points'][0]['x']).normalize().tz_localize('UTC')
         idx = dates.index(current)
 
         if triggered == 'next-day.n_clicks':
@@ -365,8 +373,9 @@ def update_nav_button_states(click_data, mode):
     if mode != 'detail' or not click_data or 'points' not in click_data:
         raise PreventUpdate
 
-    current_date = pd.to_datetime(click_data['points'][0]['x']).normalize()
-    dates = list(dt_obs)
+    current_date = pd.to_datetime(click_data['points'][0]['x']).normalize().tz_localize('UTC')
+    # dates = list(dt_obs_set)
+    dates = sorted(dt_obs_set)
     idx = dates.index(current_date)
 
     disable_prev = idx >= len(dates) - 1  
@@ -387,7 +396,6 @@ def store_relay(relayoutData, n_clicks):
         return {}
     return relayoutData
 
-
 ### Controls filtering of table
 @app.callback(
     Output('events-table', 'data'),
@@ -401,9 +409,8 @@ def store_relay(relayoutData, n_clicks):
 )
 def update_table(page_current, page_size, date_range, clickData, mode, relayoutData):    
     start_ts, end_ts = date_range
-    start_date = pd.to_datetime(datetime.datetime.fromtimestamp(start_ts))
-    end_date = pd.to_datetime(datetime.datetime.fromtimestamp(end_ts))
-
+    start_date = pd.to_datetime(start_ts, unit='s', utc=True)
+    end_date = pd.to_datetime(end_ts, unit='s', utc=True)
     df_filtered = df_events.copy()
 
     ### If reset then default to range slider filter
@@ -412,16 +419,16 @@ def update_table(page_current, page_size, date_range, clickData, mode, relayoutD
 
     # If there is a zoom then filter on that
     elif relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
-        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]']).normalize()
-        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]']).normalize()
+        zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]'], utc=True).normalize()
+        zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]'], utc=True).normalize()
         df_filtered = df_events[df_events['date'].between(zoom_start, zoom_end)]
         if clickData and 'points' in clickData:
-            clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+            clicked_date = pd.to_datetime(clickData['points'][0]['x'], utc=True).normalize()
             df_filtered = df_events[df_events['date'] == clicked_date]
 
     # If there is a click then filter to that
     elif clickData and 'points' in clickData:
-        clicked_date = pd.to_datetime(clickData['points'][0]['x']).normalize()
+        clicked_date = pd.to_datetime(clickData['points'][0]['x'], utc=True).normalize()
         df_filtered = df_events[df_events['date'] == clicked_date]
 
     # Fallback: use slider range
