@@ -62,7 +62,7 @@ app.layout = html.Div([
     ,html.Div([html.Button("Reset View", id="reset-button", n_clicks=0, className='dash-button')
     ], style={
         'display': 'flex',
-        'justifyContent': 'flex-end',
+        'justifyContent': 'flex-start',
         'padding': '10px'}
     , id='reset-button-container'
     , className="reset-button-container"
