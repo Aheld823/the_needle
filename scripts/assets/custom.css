@@ -52,6 +52,11 @@ body {
 .dash-button:hover {
     background-color: #b8e6bf;
 }
+.dash-button:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
 .dash-table-container .dash-spreadsheet-page {
     justify-content: center;
     padding: 10px;

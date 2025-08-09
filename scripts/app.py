@@ -63,6 +63,7 @@ app.layout = html.Div([
     )
     ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
+        html.Div(id='slider-lock-indicator', style={'textAlign':'center','marginBottom': '10px'}),
         dcc.RangeSlider(
             id='date-slider'
             ,min=int(dt_all[0].timestamp())
@@ -75,8 +76,8 @@ app.layout = html.Div([
     , id='slider-container'
     ,className='slider-wrapper')  
     ,html.Center([
-        html.Button("← Previous", id="prev-day", n_clicks=0, className='dash-button')
-        ,html.Button("Next →", id="next-day", n_clicks=0, className='dash-button')
+        html.Button("← Previous", id="prev-day", n_clicks=0, className='dash-button', disabled=False)
+        ,html.Button("Next →", id="next-day", n_clicks=0, className='dash-button', disabled=False)
     ]
     , id='detail-nav-buttons'
     , className='detail-nav-buttons-container'
@@ -150,7 +151,6 @@ def toggle_detail_controls(mode):
     # main mode: show slider, hide buttons
     return {'display': 'block'}, {'display': 'none'}
 
-
 ### Determine value for needle-rating-box
 @app.callback(
     Output('needle-rating-box', 'children')
@@ -181,7 +181,7 @@ def update_rating_text(date_range, relayoutData, mode, clickData):
             current_rating = df_filtered.sort_values('date', ascending=False)['needle_rating'].iloc[0]
             return html.Span([html.Strong(f"NEEDLE RATING ON {clicked_date_str}: "),str(current_rating)])
         else:
-            return html.Span([html.Strong("NO RATING AVAILABLE FOR "),str(clicked_date_str)])
+            return html.Span([html.Strong(f"NO RATING AVAILABLE FOR {clicked_date_str}")])
 
     # Find latest available rating (sorted by date descending)
     if not df_filtered.empty:
@@ -283,6 +283,8 @@ def update_chart(date_range, relayoutData, mode, clickData):
 # Controls range slider
 @app.callback(
     Output('date-slider', 'value'),
+    Output('date-slider', 'disabled'),
+    Output('slider-lock-indicator', 'children'),
     Input('relayout-store', 'data'),
     Input('reset-button', 'n_clicks'),
     prevent_initial_call=True
@@ -293,20 +295,19 @@ def sync_slider_with_zoom_or_reset(relayoutData, n_clicks):
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
     if trigger_id == 'reset-button':
-        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())], False, ''
 
     if relayoutData and 'xaxis.range[0]' in relayoutData and 'xaxis.range[1]' in relayoutData:
         zoom_start = pd.to_datetime(relayoutData['xaxis.range[0]'])
         zoom_end = pd.to_datetime(relayoutData['xaxis.range[1]'])
-        return [int(zoom_start.timestamp()), int(zoom_end.timestamp())]
+        return [int(zoom_start.timestamp()), int(zoom_end.timestamp())], True, 'Click Reset to Unlock Slider'
 
     elif relayoutData and relayoutData.get('xaxis.autorange') == True:
-        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
+        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())], False, ''
     
     else:
-        return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
-
-
+        return [int(dt_all[0].timestamp()), int(dt_all.max().timestamp())], False, ''
+        # return [int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())], False, ''
 
 ### Controls data storage and output
 @app.callback(
@@ -353,6 +354,25 @@ def handle_all_interactions(clickData, prev_clicks, next_clicks, reset_clicks, m
 
     raise PreventUpdate
 
+@app.callback(
+    Output('prev-day', 'disabled'),
+    Output('next-day', 'disabled'),
+    Input('click-store', 'data'),
+    State('chart-mode', 'data'),
+    prevent_initial_call=True
+)
+def update_nav_button_states(click_data, mode):
+    if mode != 'detail' or not click_data or 'points' not in click_data:
+        raise PreventUpdate
+
+    current_date = pd.to_datetime(click_data['points'][0]['x']).normalize()
+    dates = list(dt_obs)
+    idx = dates.index(current_date)
+
+    disable_prev = idx >= len(dates) - 1  
+    disable_next = idx <= 0               
+
+    return disable_prev, disable_next
 
 ### Controls storage of zoom information
 @app.callback(
