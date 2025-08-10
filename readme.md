@@ -9,7 +9,7 @@ To view the live dashboard(link to come)
 The data is pulled via selenium scraper from the Washington City Paper website. All manipulations and visualizations are done in Plotly/Dash.
 
 # Run this dashboard
-The run this dashboard locally simply copy this repo. Install the necessary requirements and run the following command in your terminal
+The run this dashboard locally simply clone this repo. Install the necessary requirements and run the following command in your terminal
 ```
 source start_app.sh
 ```
