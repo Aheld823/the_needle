@@ -42,6 +42,7 @@ def main():
 
     df_events.to_excel('../input/events.xlsx')
     df_scores.to_excel('../input/scores.xlsx')
+    return
 
 if __name__ == "__main__":
     main()

@@ -6,14 +6,10 @@ from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
-import full_refresh
-
-
-# full_refresh.main()
 
 # Initial data wrangling for the app
-df_events = pd.read_excel('../input/events.xlsx')
-df_scores = pd.read_excel('../input/scores.xlsx')
+df_events = pd.read_excel('input/events.xlsx')
+df_scores = pd.read_excel('input/scores.xlsx')
 
 ## Create base start point and setting colors 
 df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
@@ -66,18 +62,19 @@ app.layout = html.Div([
     ,dbc.Modal(
         [
             dbc.ModalHeader("THE NEEDLE DASHBOARD"),
-            dbc.ModalBody(dcc.Markdown("""
-                Welcome to The Needle dashboard. This is a project tracking the [Washington City Paper quality of life index](https://washingtoncitypaper.com/article/759589/reintroducing-the-needle/). 
-                
-                *What can the tool do?*\n
-                Please click around to find out! The main graph tracks The Needle rating over time. By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating.
+            dbc.ModalBody(
+            dcc.Markdown('''
+                <p>Welcome to The Needle dashboard. This is a project tracking the 
+                <a href="https://washingtoncitypaper.com/article/759589/reintroducing-the-needle/" target="_blank" rel="noopener noreferrer">
+                Washington City Paper quality of life index</a>.</p>
 
-                *This is a volunteer project created by Andrew Held. To learn more visit the project's [GitHub](https://github.com/Aheld823/the_needle).*
-                                       
-                """)
-            )
-            # dbc.ModalBody(["Welcome to The Needle dashboard."
-                        #    ,"This is a project tracking the Washington City Paper quality of life index"]),
+                *What can the tool do?*\n
+                Please click around to find out! The main graph tracks The Needle rating over time. 
+                By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating.
+
+                <p><em>This is a volunteer project created by Andrew Held. To learn more visit the project's 
+                <a href="https://github.com/Aheld823/the_needle" target="_blank" rel="noopener noreferrer">GitHub</a>.</em></p>
+            ''', dangerously_allow_html=True))
             ,dbc.ModalFooter(
                 dbc.Button("Close", id="close-popup", className="dash-button", n_clicks=0)
             ),
