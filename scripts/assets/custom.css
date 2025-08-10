@@ -4,6 +4,10 @@ body {
   margin: 0;
   padding: 10;
 }
+.H1{
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    cursor: pointer !important;
+}
 .dash-graph{
   padding: 0px;
 }

@@ -1,14 +1,19 @@
 from dash import Dash, html, dcc, callback, Output, Input, dash_table, State, callback_context
+import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
+import full_refresh
+
+
+# full_refresh.main()
 
 # Initial data wrangling for the app
-df_events = pd.read_excel('input/events.xlsx')
-df_scores = pd.read_excel('input/scores.xlsx')
+df_events = pd.read_excel('../input/events.xlsx')
+df_scores = pd.read_excel('../input/scores.xlsx')
 
 ## Create base start point and setting colors 
 df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
@@ -53,11 +58,36 @@ df_events['color'] = df_events['score'].apply(
 )
 
 # Initiate App
-app = Dash(__name__, suppress_callback_exceptions=True)
+app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 ## Set up App layout
 app.layout = html.Div([
-    html.H1('THE NEEDLE DASHBOARD')
+    html.H1('THE NEEDLE DASHBOARD', id='header', style={'cursor': 'pointer'})
+    ,dbc.Modal(
+        [
+            dbc.ModalHeader("THE NEEDLE DASHBOARD"),
+            dbc.ModalBody(dcc.Markdown("""
+                Welcome to The Needle dashboard. This is a project tracking the [Washington City Paper quality of life index](https://washingtoncitypaper.com/article/759589/reintroducing-the-needle/). 
+                
+                *What can the tool do?*\n
+                Please click around to find out! The main graph tracks The Needle rating over time. By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating.
+
+                *This is a volunteer project created by Andrew Held. To learn more visit the project's [GitHub](https://github.com/Aheld823/the_needle).*
+                                       
+                """)
+            )
+            # dbc.ModalBody(["Welcome to The Needle dashboard."
+                        #    ,"This is a project tracking the Washington City Paper quality of life index"]),
+            ,dbc.ModalFooter(
+                dbc.Button("Close", id="close-popup", className="dash-button", n_clicks=0)
+            ),
+        ],
+        id="popup-modal",
+        size='lg',
+        is_open=True, 
+        backdrop=True, 
+        keyboard=True,  
+    )
     ,html.Div(id='needle-rating-box')
     ,html.Div([html.Button("Reset View", id="reset-button", n_clicks=0, className='dash-button')
     ], style={
@@ -129,6 +159,7 @@ app.layout = html.Div([
     )
     ]
     )
+    ,dcc.Store(id='popup-visible', data=True)
     ,dcc.Store(id='click-store', data=None)
     ,dcc.Store(id='relayout-store', data={})
     ,dcc.Store(id='chart-mode', data='main')
@@ -144,6 +175,30 @@ app.layout = html.Div([
 
 
 ## Callbacks 
+# Callback to control modal visibility
+@app.callback(
+    Output("popup-modal", "is_open"),
+    Input("close-popup", "n_clicks"),
+    Input("header", "n_clicks"),
+    State("popup-modal", "is_open"),
+    prevent_initial_call=True
+)
+def toggle_modal(close_clicks, header_clicks, is_open):
+    ctx = callback_context
+
+    if not ctx.triggered:
+        raise PreventUpdate
+
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if trigger_id == "close-popup":
+        return False
+    elif trigger_id == "header":
+        return True
+
+    return is_open
+
+
 ### Show/hide buttons and slider depending on mode
 @app.callback(
     Output('slider-container', 'style')
