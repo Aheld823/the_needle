@@ -1,5 +1,6 @@
 .venv
-/input/
+# /input/
 /output/
+*.csv
 __pycache__
 scripts/scratch.py
