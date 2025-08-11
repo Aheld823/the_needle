@@ -56,6 +56,8 @@ df_events['color'] = df_events['score'].apply(
 # Initiate App
 app = Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+server = app.server
+
 ## Set up App layout
 app.layout = html.Div([
     html.H1('THE NEEDLE DASHBOARD', id='header', style={'cursor': 'pointer'})
