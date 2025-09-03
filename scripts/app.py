@@ -24,6 +24,11 @@ df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'y'] = 1.0
 
+## Create y variable such that those with net_score == 0 show up on the chart
+df_events['y'] = df_events['score']
+zero_mask = df_events['score'] == 0
+df_events.loc[zero_mask, 'y'] = 1.0
+
 ## Fix time zones to avoid bad filtering
 df_scores['date'] = pd.to_datetime(df_scores['date'], errors='coerce').dt.tz_localize('UTC')
 df_events['date'] = pd.to_datetime(df_events['date'], errors='coerce').dt.tz_localize('UTC')
@@ -96,7 +101,10 @@ app.layout = html.Div([
     , id='reset-button-container'
     , className="reset-button-container"
     )
-    ,dcc.Graph(id = 'waterfall-graph')
+    ,dcc.Graph(id = 'waterfall-graph'
+        ,config={
+        'doubleClick': False,
+        })
     ,html.Div([
         html.Div(id='slider-lock-indicator', style={'textAlign':'left','marginBottom': '10px'}),
         dcc.RangeSlider(
@@ -271,7 +279,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
 
         fig = go.Figure(data = [go.Bar(
         x = df_filtered['event_id']          
-        ,y = df_filtered['score']
+        ,y = df_filtered['y']
         ,base = 0      
         ,marker_color = df_filtered['color']
         ,customdata = df_filtered[['title']]
@@ -296,6 +304,8 @@ def update_chart(date_range, relayoutData, mode, clickData):
             showgrid=True,
             gridcolor='#e0e0e0'
         ))
+        fig.update_xaxes(fixedrange=True)
+        fig.update_yaxes(fixedrange=True)
         return fig
 
     # Filter on zoom
