@@ -51,7 +51,7 @@ def get_article_urls(limit):
 
     driver.quit()
 
-    missing_urls = [
+    missing_urls = ['https://washingtoncitypaper.com/article/766285/needle-truck-tank-pedestrian-trans-medical-care/'
 
     ]
     all_urls = list(dict.fromkeys(urls + missing_urls))
