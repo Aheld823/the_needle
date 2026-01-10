@@ -9,6 +9,8 @@ from selenium.webdriver.common.by import By
 
 options = Options()
 options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
 
 def get_articles(urls):
     driver = webdriver.Chrome(options=options)
@@ -135,6 +137,6 @@ def get_articles(urls):
         else:
             pass
             # print("No <div class='entry-content'> found.")
-    
+    driver.quit()
     return df_events, df_scores
 

@@ -7,6 +7,8 @@ from selenium.webdriver.common.by import By
 
 options = Options()
 options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
 
 def get_article_urls(limit):
     urls = []
@@ -46,4 +48,13 @@ def get_article_urls(limit):
             break
         else:
             page_number += 1
-    return urls
+
+    driver.quit()
+
+    missing_urls = [
+
+    ]
+    all_urls = list(dict.fromkeys(urls + missing_urls))
+
+    return all_urls
+

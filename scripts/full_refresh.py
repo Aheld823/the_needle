@@ -36,6 +36,8 @@ def main():
                                 ,'needle_rating':int
                                 ,'url':'object'})
     df_scores['date'] = df_scores['date'].dt.normalize()
+    # Drop duplicates for date
+    df_scores = df_scores.drop_duplicates(subset=['date'])
     df_scores['needle_rating_previous'] = df_scores['needle_rating'].shift(-1)
     # Invert artcile_id scale so that the first article is #1
     df_scores['article_id'] = df_scores['article_id'].rank(method='first', ascending=False).astype(int)

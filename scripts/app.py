@@ -6,6 +6,7 @@ from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
+from last_update_date import get_last_update_date
 
 # Initial data wrangling for the app
 df_events = pd.read_excel('input/events.xlsx')
@@ -65,7 +66,7 @@ app.layout = html.Div([
         [
             dbc.ModalHeader("THE NEEDLE DASHBOARD"),
             dbc.ModalBody(
-            dcc.Markdown('''
+            dcc.Markdown(f'''
                 <p>Welcome to The Needle dashboard. This is a project tracking the 
                 <a href="https://washingtoncitypaper.com/article/759589/reintroducing-the-needle/" target="_blank" rel="noopener noreferrer">
                 Washington City Paper quality of life index</a>.</p>
@@ -76,6 +77,8 @@ app.layout = html.Div([
 
                 <p><em>This is a volunteer project created by Andrew Held. To learn more visit the project's 
                 <a href="https://github.com/Aheld823/the_needle" target="_blank" rel="noopener noreferrer">GitHub</a>.</em></p>
+                
+                <p> Last Update: {get_last_update_date()}</p>
             ''', dangerously_allow_html=True))
             ,dbc.ModalFooter(
                 dbc.Button("Close", id="close-popup", className="dash-button", n_clicks=0)
