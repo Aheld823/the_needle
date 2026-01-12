@@ -19,6 +19,8 @@ if chrome_bin:
 
 def get_articles(urls):
     driver = webdriver.Chrome(options=options)
+    driver.set_page_load_timeout(180)  
+    driver.implicitly_wait(10)
     df_events = pd.DataFrame()
     df_scores = pd.DataFrame()
     for id, url in enumerate(urls,1):
