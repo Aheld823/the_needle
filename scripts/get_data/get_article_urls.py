@@ -4,11 +4,16 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+import os 
 
 options = Options()
 options.add_argument('--headless')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
+
+chrome_bin = os.getenv('CHROME_BIN')
+if chrome_bin:
+    options.binary_location = chrome_bin
 
 def get_article_urls(limit):
     urls = []
