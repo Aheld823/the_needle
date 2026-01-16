@@ -8,8 +8,6 @@ import os
 import datetime as datetime
 from last_update_date import get_last_update_date
 
-tstamp = datetime.datetime.now().date()
-
 # Initial data wrangling for the app
 df_events = pd.read_excel('input/events.xlsx')
 df_scores = pd.read_excel('input/scores.xlsx')
@@ -26,11 +24,6 @@ df_scores['color'] = df_scores['net_score'].apply(
 df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'y'] = 1.0
-
-## Create y variable such that those with net_score == 0 show up on the chart
-df_events['y'] = df_events['score']
-zero_mask = df_events['score'] == 0
-df_events.loc[zero_mask, 'y'] = 1.0
 
 ## Fix time zones to avoid bad filtering
 df_scores['date'] = pd.to_datetime(df_scores['date'], errors='coerce').dt.tz_localize('UTC')
@@ -80,18 +73,12 @@ app.layout = html.Div([
 
                 *What can the tool do?*\n
                 Please click around to find out! The main graph tracks The Needle rating over time. 
-                By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating. 
-                You can filter the graph by draging your cursor to zoom, or by using the slider on the bottom of the graph. To undo anything just click the reset view.
+                By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating.
 
-                <p><em>This is a volunteer project. To learn more visit the project's 
+                <p><em>This is a volunteer project created by Andrew Held. To learn more visit the project's 
                 <a href="https://github.com/Aheld823/the_needle" target="_blank" rel="noopener noreferrer">GitHub</a>.</em></p>
                 
-<<<<<<< HEAD
-                <strong>Last updated</strong>: {tstamp}
-
-=======
                 <p> Last Update: {get_last_update_date()}</p>
->>>>>>> main
             ''', dangerously_allow_html=True))
             ,dbc.ModalFooter(
                 dbc.Button("Close", id="close-popup", className="dash-button", n_clicks=0)
@@ -112,10 +99,7 @@ app.layout = html.Div([
     , id='reset-button-container'
     , className="reset-button-container"
     )
-    ,dcc.Graph(id = 'waterfall-graph'
-        ,config={
-        'doubleClick': False,
-        })
+    ,dcc.Graph(id = 'waterfall-graph')
     ,html.Div([
         html.Div(id='slider-lock-indicator', style={'textAlign':'left','marginBottom': '10px'}),
         dcc.RangeSlider(
@@ -290,7 +274,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
 
         fig = go.Figure(data = [go.Bar(
         x = df_filtered['event_id']          
-        ,y = df_filtered['y']
+        ,y = df_filtered['score']
         ,base = 0      
         ,marker_color = df_filtered['color']
         ,customdata = df_filtered[['title']]
@@ -315,8 +299,6 @@ def update_chart(date_range, relayoutData, mode, clickData):
             showgrid=True,
             gridcolor='#e0e0e0'
         ))
-        fig.update_xaxes(fixedrange=True)
-        fig.update_yaxes(fixedrange=True)
         return fig
 
     # Filter on zoom
