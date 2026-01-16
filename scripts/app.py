@@ -6,6 +6,7 @@ from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
+from last_update_date import get_last_update_date
 
 tstamp = datetime.datetime.now().date()
 
@@ -85,8 +86,12 @@ app.layout = html.Div([
                 <p><em>This is a volunteer project. To learn more visit the project's 
                 <a href="https://github.com/Aheld823/the_needle" target="_blank" rel="noopener noreferrer">GitHub</a>.</em></p>
                 
+<<<<<<< HEAD
                 <strong>Last updated</strong>: {tstamp}
 
+=======
+                <p> Last Update: {get_last_update_date()}</p>
+>>>>>>> main
             ''', dangerously_allow_html=True))
             ,dbc.ModalFooter(
                 dbc.Button("Close", id="close-popup", className="dash-button", n_clicks=0)
