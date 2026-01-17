@@ -44,11 +44,11 @@ def main():
     df_scores['article_id'] = df_scores['article_id'].rank(method='first', ascending=False).astype(int)
 
     score_gaps = gap_check(df_scores)
-    print(f'Score gaps found:\n{score_gaps}')
+    print(f'Score gaps found:\n{len(score_gaps)}')
 
     df_events.to_excel('../input/events.xlsx')
     df_scores.to_excel('../input/scores.xlsx')
-    df_gaps.to_excel('../output/score_gaps.xlsx')
+    score_gaps.to_excel('../output/score_gaps.xlsx')
     return
 
 if __name__ == "__main__":
