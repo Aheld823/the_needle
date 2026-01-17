@@ -25,6 +25,11 @@ df_scores['y'] = df_scores['net_score']
 zero_mask = df_scores['net_score'] == 0
 df_scores.loc[zero_mask, 'y'] = 1.0
 
+## Create y variable such that those with net_score == 0 show up on the chart
+df_events['y'] = df_events['score']
+zero_mask = df_events['score'] == 0
+df_events.loc[zero_mask, 'y'] = 1.0
+
 ## Fix time zones to avoid bad filtering
 df_scores['date'] = pd.to_datetime(df_scores['date'], errors='coerce').dt.tz_localize('UTC')
 df_events['date'] = pd.to_datetime(df_events['date'], errors='coerce').dt.tz_localize('UTC')
@@ -37,11 +42,15 @@ dt_breaks = [d for d in dt_all if d not in dt_obs_set]
 # dt_breaks = [d for d in dt_all if d not in dt_obs.values]
 dt_breaks = pd.to_datetime(dt_breaks, utc=True)
 
+# Set up marks for the slider, but filter some so they don't overlap
 marks = {
     int(d.timestamp()): d.strftime('%m/%d/%y')
     for i, d in enumerate(dt_all)
     if i % 7 == 0 or d == dt_all[-1] or d == dt_all[0]  # every 10th + first/last
 }
+mark_positions = list(marks.keys())
+filtered_marks = {k: marks[k] for i, k in enumerate(mark_positions) if i % 2 == 0}
+filtered_marks[mark_positions[-1]] = marks[mark_positions[-1]]
 
 ## Creates text for table
 df_events['title_desc'] = (
@@ -107,7 +116,7 @@ app.layout = html.Div([
             ,min=int(dt_all[0].timestamp())
             ,max=int(dt_all[-1].timestamp())
             ,value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
-            ,marks=marks
+            ,marks=filtered_marks
             ,className='date-slider'
         )
     ]
@@ -274,7 +283,7 @@ def update_chart(date_range, relayoutData, mode, clickData):
 
         fig = go.Figure(data = [go.Bar(
         x = df_filtered['event_id']          
-        ,y = df_filtered['score']
+        ,y = df_filtered['y']
         ,base = 0      
         ,marker_color = df_filtered['color']
         ,customdata = df_filtered[['title']]

@@ -7,5 +7,7 @@ def get_last_update_date():
     if files:
         latest_file = max(files, key=os.path.getmtime)
         mod_time = os.path.getmtime(latest_file)
-        return datetime.fromtimestamp(mod_time).strftime('%B %Y')
+        return datetime.fromtimestamp(mod_time).strftime('%B %d, %Y')
+    
+    
     return 'Unknown'
