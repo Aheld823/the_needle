@@ -42,11 +42,15 @@ dt_breaks = [d for d in dt_all if d not in dt_obs_set]
 # dt_breaks = [d for d in dt_all if d not in dt_obs.values]
 dt_breaks = pd.to_datetime(dt_breaks, utc=True)
 
+# Set up marks for the slider, but filter some so they don't overlap
 marks = {
     int(d.timestamp()): d.strftime('%m/%d/%y')
     for i, d in enumerate(dt_all)
     if i % 7 == 0 or d == dt_all[-1] or d == dt_all[0]  # every 10th + first/last
 }
+mark_positions = list(marks.keys())
+filtered_marks = {k: marks[k] for i, k in enumerate(mark_positions) if i % 2 == 0}
+filtered_marks[mark_positions[-1]] = marks[mark_positions[-1]]
 
 ## Creates text for table
 df_events['title_desc'] = (
@@ -112,7 +116,7 @@ app.layout = html.Div([
             ,min=int(dt_all[0].timestamp())
             ,max=int(dt_all[-1].timestamp())
             ,value=[int(dt_all[0].timestamp()), int(dt_all[-1].timestamp())]
-            ,marks=marks
+            ,marks=filtered_marks
             ,className='date-slider'
         )
     ]
