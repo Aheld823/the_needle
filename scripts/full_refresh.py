@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import get_data.get_article_urls as get_article_urls
 import get_data.get_articles as get_articles
+from gap_check import gap_check
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -42,8 +43,12 @@ def main():
     # Invert artcile_id scale so that the first article is #1
     df_scores['article_id'] = df_scores['article_id'].rank(method='first', ascending=False).astype(int)
 
+    score_gaps = gap_check(df_scores)
+    print(f'Score gaps found:\n{score_gaps}')
+
     df_events.to_excel('../input/events.xlsx')
     df_scores.to_excel('../input/scores.xlsx')
+    df_gaps.to_excel('../output/score_gaps.xlsx')
     return
 
 if __name__ == "__main__":
