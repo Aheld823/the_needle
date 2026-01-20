@@ -6,11 +6,21 @@ from dash.exceptions import PreventUpdate
 import pandas as pd
 import os
 import datetime as datetime
-from last_update_date import get_last_update_date
+
+# Function for getting last update date
+def get_last_update_date():
+    input_dir = 'data'  # your data directory
+    files = [os.path.join(input_dir, f) for f in os.listdir(input_dir)]
+    if files:
+        latest_file = max(files, key=os.path.getmtime)
+        mod_time = os.path.getmtime(latest_file)
+        return datetime.datetime.fromtimestamp(mod_time).strftime('%B %d, %Y')
+    
+    return 'Unknown'
 
 # Initial data wrangling for the app
-df_events = pd.read_excel('input/events.xlsx')
-df_scores = pd.read_excel('input/scores.xlsx')
+df_events = pd.read_excel('data/events.xlsx')
+df_scores = pd.read_excel('data/scores.xlsx')
 
 ## Create base start point and setting colors 
 df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
