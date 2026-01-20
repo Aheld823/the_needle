@@ -32,7 +32,7 @@ jobs:
       
     - name: Run scraper
       run: |
-        python scripts/full_refresh.py  
+        python scripts/latest_refresh.py  
       env:
         CHROME_BIN: /usr/bin/chromium-browser
         CHROMEDRIVER_PATH: /usr/bin/chromedriver

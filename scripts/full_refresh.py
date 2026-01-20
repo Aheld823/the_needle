@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import json
 import get_data.get_article_urls as get_article_urls
 import get_data.get_articles as get_articles
 from gap_check import gap_check
@@ -7,13 +8,16 @@ from gap_check import gap_check
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
-os.makedirs('../input/', exist_ok=True)
-os.makedirs('../output/', exist_ok=True)
+os.makedirs('../data/', exist_ok=True)
 
 def main():
+    with open('../data/unlisted_urls.json', 'r') as f:
+        unlisted_urls = json.load(f)
     urls = get_article_urls.get_article_urls(limit = None)
-    df_events, df_scores = get_articles.get_articles(urls)
+    all_urls = list(dict.fromkeys(urls + unlisted_urls))
+    df_events, df_scores = get_articles.get_articles(all_urls)
     
+    # Format events for display
     df_events['date'] = pd.to_datetime(df_events['date'], utc=True)
     df_events['date'] = df_events['date'].dt.tz_localize(None)
     df_events = df_events.astype({'article_id': 'object'
@@ -28,9 +32,10 @@ def main():
     # Invert artcile_id scale so that the first article is #1
     df_events['article_id'] = df_events['article_id'].rank(method='first', ascending=False).astype(int)
 
-    
+    # Format scores for display
     df_scores['date'] = pd.to_datetime(df_scores['date'], utc=True)
     df_scores['date'] = df_scores['date'].dt.tz_localize(None)
+    df_scores = df_scores.sort_values(by=['date'], ascending=False)
     df_scores = df_scores.astype({'article_id': 'object'
                                 ,'date': 'datetime64[ns]'
                                 ,'net_score': int
@@ -46,9 +51,9 @@ def main():
     score_gaps = gap_check(df_scores)
     print(f'Score gaps found:\n{len(score_gaps)}')
 
-    df_events.to_excel('../input/events.xlsx')
-    df_scores.to_excel('../input/scores.xlsx')
-    score_gaps.to_excel('../output/score_gaps.xlsx')
+    df_events.to_excel('../data/events.xlsx')
+    df_scores.to_excel('../data/scores.xlsx')
+    score_gaps.to_excel('../data/score_gaps.xlsx')
     return
 
 if __name__ == "__main__":

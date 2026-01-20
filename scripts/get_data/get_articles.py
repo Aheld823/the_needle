@@ -15,7 +15,6 @@ options.add_argument('--disable-dev-shm-usage')
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920,1080")
                      
-
 chrome_bin = os.getenv('CHROME_BIN')
 if chrome_bin:
     options.binary_location = chrome_bin
@@ -110,7 +109,7 @@ def get_articles(urls):
             for p in paragraphs:
                 text = p.get_text(strip=False)
                 event_match = re.match(r'^(.*?)(?:[:?])\s*(.*?)([-+]\d+)\s*\[', text) # regex to capture parts of event_text
-                score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text)
+                score_match = re.search(r"Today’s score:\s*([+-]?\d+)", text) # regex to get net score for article
                 needle_match = re.search(r"Today’s Needle rating:\s*(-?\d+)", text) # regex to get needle score for today
                 # print(f"Paragraph {idx}: {p.get_text(strip=False)}")
 
