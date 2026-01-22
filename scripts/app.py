@@ -23,7 +23,7 @@ df_events = pd.read_excel('data/events.xlsx')
 df_scores = pd.read_excel('data/scores.xlsx')
 
 ## Create base start point and setting colors 
-df_scores.loc[df_scores['article_id']==1, 'needle_rating_previous'] = 70.0
+df_scores.loc[df_scores['date'] == df_scores['date'].min(), 'needle_rating_previous'] = 70.0
 df_scores['base'] = df_scores[['needle_rating_previous', 'needle_rating']].min(axis=1)
 
 df_scores['color'] = df_scores['net_score'].apply(
