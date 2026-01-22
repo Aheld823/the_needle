@@ -94,7 +94,7 @@ app.layout = html.Div([
                 Please click around to find out! The main graph tracks The Needle rating over time. 
                 By clicking on one of the waterfalls you can zoom in and see the events from that day that make up The Needle rating.
 
-                <p><em>This is a volunteer project created by Andrew Held. To learn more visit the project's 
+                <p><em>This is a volunteer project. To learn more visit the project's 
                 <a href="https://github.com/Aheld823/the_needle" target="_blank" rel="noopener noreferrer">GitHub</a>.</em></p>
                 
                 <p> Last Update: {get_last_update_date()}</p>
